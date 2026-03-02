@@ -1,0 +1,5100 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Kyushu Trip Itinerary Options Analysis</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Playfair+Display:wght@600;700&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" integrity="sha256-p4NxAoJBhIIN+hmNHrzRCf9tD/miZyoHS5obTRR9BMY=" crossorigin="" />
+  <style>
+    :root {
+      --bg: #FAFAF7;
+      --surface: #FFFFFF;
+      --surface-2: #F4F5F3;
+      --border: #E7E7E2;
+      --text: #121616;
+      --muted: #5E6B6B;
+      --teal: #0F766E;
+      --teal-hover: #115E59;
+      --teal-tint: #E6F4F2;
+      --gold: #B08D57;
+      --radius: 16px;
+      --radius-sm: 12px;
+      --shadow: 0 8px 20px rgba(18, 22, 22, 0.05);
+      --shadow-hover: 0 14px 28px rgba(18, 22, 22, 0.1);
+      --max: 1260px;
+      --space-1: 8px;
+      --space-2: 12px;
+      --space-3: 16px;
+      --space-4: 24px;
+      --space-5: 32px;
+      --space-6: 40px;
+      --transition: 180ms ease;
+    }
+
+    * {
+      box-sizing: border-box;
+    }
+
+    html {
+      scroll-behavior: smooth;
+    }
+
+    body {
+      margin: 0;
+      font-family: "Inter", "Segoe UI", sans-serif;
+      background: radial-gradient(circle at top right, rgba(176, 141, 87, 0.06), transparent 36%), var(--bg);
+      color: var(--text);
+      line-height: 1.52;
+      font-size: 15px;
+      overflow-x: hidden;
+    }
+
+    a {
+      color: var(--teal);
+      text-decoration: none;
+      transition: color var(--transition);
+    }
+
+    a:hover {
+      text-decoration: underline;
+      text-underline-offset: 3px;
+    }
+
+    h1, h2, h3 {
+      font-family: "Playfair Display", Georgia, serif;
+      margin: 0 0 var(--space-2);
+      color: var(--text);
+      letter-spacing: 0.01em;
+    }
+
+    h1 {
+      font-size: clamp(2.5rem, 4vw, 2.75rem);
+      line-height: 1.12;
+    }
+
+    h2 {
+      font-size: clamp(1.5rem, 2.5vw, 1.75rem);
+      line-height: 1.2;
+    }
+
+    h3 {
+      font-size: 1.08rem;
+      font-family: "Inter", "Segoe UI", sans-serif;
+      font-weight: 600;
+      letter-spacing: 0.01em;
+    }
+
+    p {
+      margin: 0;
+    }
+
+    .small {
+      font-size: 13.5px;
+      color: var(--muted);
+    }
+
+    .muted {
+      color: var(--muted);
+    }
+
+    .container {
+      width: min(var(--max), 94vw);
+      margin: 0 auto;
+      max-width: 100%;
+      min-width: 0;
+    }
+
+    .site-header {
+      position: sticky;
+      top: 0;
+      z-index: 1000;
+      border-bottom: 1px solid var(--border);
+      background: rgba(250, 250, 247, 0.95);
+      backdrop-filter: blur(8px);
+    }
+
+    .site-header .header-inner {
+      width: min(var(--max), 96vw);
+      margin: 0 auto;
+      padding: var(--space-3) 0 var(--space-2);
+      display: grid;
+      gap: var(--space-3);
+    }
+
+    .site-header.is-collapsed .header-inner {
+      padding: 10px 0 8px;
+      gap: 8px;
+    }
+
+    .site-header.is-collapsed .trip-dates,
+    .site-header.is-collapsed .stats-row,
+    .site-header.is-collapsed .jump-nav {
+      display: none;
+    }
+
+    .title-line {
+      display: flex;
+      justify-content: space-between;
+      gap: var(--space-3);
+      align-items: end;
+      flex-wrap: wrap;
+    }
+
+    .header-toggle {
+      white-space: nowrap;
+    }
+
+    .trip-dates {
+      font-weight: 500;
+      color: var(--muted);
+      font-size: 14px;
+    }
+
+    .stats-row {
+      display: flex;
+      flex-wrap: wrap;
+      gap: var(--space-2);
+      align-items: center;
+    }
+
+    .stat-pill {
+      padding: 8px 12px;
+      border-radius: 999px;
+      border: 1px solid var(--border);
+      background: var(--surface);
+      font-size: 13px;
+      box-shadow: 0 2px 4px rgba(18, 22, 22, 0.02);
+    }
+
+    .stat-pill strong {
+      color: var(--text);
+      margin-right: 4px;
+    }
+
+    .toggle-pill {
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      cursor: pointer;
+      padding: 8px 12px;
+      border-radius: 999px;
+      border: 1px solid var(--border);
+      background: var(--surface);
+      font-size: 13px;
+    }
+
+    .toggle-pill input {
+      accent-color: var(--teal);
+    }
+
+    .jump-nav {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 8px;
+      padding-bottom: 2px;
+    }
+
+    .jump-nav a {
+      border-radius: 999px;
+      border: 1px solid var(--border);
+      padding: 7px 12px;
+      font-size: 13px;
+      background: var(--surface);
+      color: var(--text);
+      transition: background var(--transition), border-color var(--transition), transform var(--transition), box-shadow var(--transition);
+    }
+
+    .jump-nav a:hover {
+      text-decoration: none;
+      border-color: var(--teal);
+      color: var(--teal);
+      transform: translateY(-1px);
+      box-shadow: 0 6px 14px rgba(15, 118, 110, 0.14);
+    }
+
+    main {
+      padding: var(--space-5) 0 var(--space-6);
+      display: grid;
+      gap: var(--space-5);
+    }
+
+    section {
+      display: grid;
+      gap: var(--space-3);
+      scroll-margin-top: 120px;
+      min-width: 0;
+      max-width: 100%;
+    }
+
+    body.header-expanded section {
+      scroll-margin-top: 210px;
+    }
+
+    .section-intro {
+      color: var(--muted);
+      max-width: 920px;
+      font-size: 14px;
+    }
+
+    .panel {
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      background: var(--surface);
+      padding: var(--space-4);
+      box-shadow: var(--shadow);
+      transition: transform var(--transition), box-shadow var(--transition), border-color var(--transition);
+      max-width: 100%;
+      min-width: 0;
+    }
+
+    .panel.hoverable:hover {
+      transform: translateY(-2px);
+      box-shadow: var(--shadow-hover);
+      border-color: #dcdcd5;
+    }
+
+    .table-wrap {
+      width: 100%;
+      max-width: 100%;
+      overflow: auto;
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      background: #fff;
+    }
+
+    table {
+      width: 100%;
+      border-collapse: collapse;
+    }
+
+    .cost-table {
+      min-width: 1080px;
+      font-size: 12.5px;
+    }
+
+    .cost-table th,
+    .cost-table td {
+      border-bottom: 1px solid var(--border);
+      padding: 8px;
+      text-align: left;
+      vertical-align: top;
+    }
+
+    .cost-table thead th,
+    .cost-table tfoot th {
+      background: var(--surface-2);
+      font-weight: 700;
+      color: var(--text);
+    }
+
+    .options-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(270px, 1fr));
+      gap: var(--space-3);
+    }
+
+    .option-card {
+      position: relative;
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      padding: var(--space-3);
+      background: var(--surface);
+      box-shadow: var(--shadow);
+      transition: transform var(--transition), box-shadow var(--transition), border-color var(--transition);
+      cursor: pointer;
+    }
+
+    .option-card:hover {
+      transform: translateY(-2px);
+      box-shadow: var(--shadow-hover);
+    }
+
+    .option-card.active {
+      border-color: var(--teal);
+      box-shadow: 0 0 0 1px rgba(15, 118, 110, 0.25), var(--shadow);
+      background: linear-gradient(180deg, #ffffff 0%, #fcfffe 100%);
+    }
+
+    .option-card .kicker {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      border-radius: 999px;
+      padding: 4px 10px;
+      font-size: 12px;
+      background: var(--teal-tint);
+      color: var(--teal);
+      margin-bottom: 10px;
+      font-weight: 600;
+    }
+
+    .option-metrics {
+      display: grid;
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+      gap: var(--space-1);
+      margin-top: 10px;
+      margin-bottom: 12px;
+      font-size: 13px;
+    }
+
+    .metric-cell {
+      background: var(--surface-2);
+      border: 1px solid var(--border);
+      border-radius: 10px;
+      padding: 8px 10px;
+    }
+
+    .cost-summary {
+      margin-top: 10px;
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      background: #fff;
+      padding: 10px;
+      display: grid;
+      gap: 6px;
+    }
+
+    .cost-total {
+      font-size: 14px;
+      font-weight: 700;
+      color: var(--teal-hover);
+    }
+
+    .cost-info summary {
+      cursor: pointer;
+      font-size: 12px;
+      font-weight: 600;
+      color: var(--teal);
+      text-decoration: underline;
+      text-underline-offset: 2px;
+    }
+
+    .cost-info-body {
+      margin-top: 8px;
+      font-size: 12px;
+      line-height: 1.5;
+      color: var(--muted);
+      display: grid;
+      gap: 6px;
+    }
+
+    .btn-row {
+      display: flex;
+      gap: var(--space-1);
+      flex-wrap: wrap;
+      align-items: center;
+    }
+
+    button,
+    .button {
+      border-radius: 10px;
+      border: 1px solid transparent;
+      font: inherit;
+      font-size: 13px;
+      padding: 9px 14px;
+      cursor: pointer;
+      transition: background var(--transition), border-color var(--transition), color var(--transition), transform var(--transition), box-shadow var(--transition);
+    }
+
+    button:hover,
+    .button:hover {
+      transform: translateY(-1px);
+    }
+
+    .btn-primary {
+      background: var(--teal);
+      color: #fff;
+      border-color: var(--teal);
+      box-shadow: 0 5px 14px rgba(15, 118, 110, 0.2);
+    }
+
+    .btn-primary:hover {
+      background: var(--teal-hover);
+      border-color: var(--teal-hover);
+      box-shadow: 0 9px 18px rgba(15, 118, 110, 0.24);
+    }
+
+    .btn-secondary {
+      background: #fff;
+      color: var(--teal);
+      border-color: rgba(15, 118, 110, 0.45);
+    }
+
+    .btn-secondary:hover {
+      background: var(--teal-tint);
+    }
+
+    .btn-soft {
+      background: var(--surface-2);
+      color: var(--text);
+      border-color: var(--border);
+      padding: 7px 10px;
+    }
+
+    .btn-soft[disabled] {
+      opacity: 0.45;
+      cursor: not-allowed;
+      transform: none;
+    }
+
+    .chip-row {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 8px;
+    }
+
+    .chip {
+      border-radius: 999px;
+      border: 1px solid transparent;
+      background: var(--teal-tint);
+      color: var(--teal);
+      font-size: 12px;
+      padding: 4px 10px;
+      font-weight: 500;
+    }
+
+    .chip-toggle {
+      border: 1px solid rgba(15, 118, 110, 0.25);
+      background: #fff;
+      color: var(--teal);
+      padding: 6px 12px;
+      border-radius: 999px;
+      font-size: 12px;
+      cursor: pointer;
+    }
+
+    .chip-toggle.active {
+      background: var(--teal-tint);
+      border-color: rgba(15, 118, 110, 0.55);
+      box-shadow: inset 0 0 0 1px rgba(15, 118, 110, 0.15);
+    }
+
+    .map-transport-grid {
+      display: grid;
+      grid-template-columns: 1.3fr 0.7fr;
+      gap: 18px;
+      align-items: stretch;
+      min-width: 0;
+    }
+
+    .map-card,
+    .transport-card {
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      background: var(--surface);
+      padding: var(--space-3);
+      box-shadow: var(--shadow);
+      max-width: 100%;
+      min-width: 0;
+      overflow: hidden;
+      display: flex;
+      flex-direction: column;
+      height: 100%;
+    }
+
+    .map-topbar {
+      display: flex;
+      justify-content: space-between;
+      gap: var(--space-2);
+      align-items: center;
+      margin-bottom: 10px;
+      flex-wrap: wrap;
+    }
+
+    .map-legend {
+      font-size: 12px;
+      color: var(--muted);
+      display: flex;
+      gap: 14px;
+      flex-wrap: wrap;
+    }
+
+    .legend-item {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+    }
+
+    .legend-dot {
+      width: 10px;
+      height: 10px;
+      border-radius: 999px;
+      border: 1px solid var(--border);
+      display: inline-block;
+    }
+
+    .legend-dot.primary {
+      background: rgba(15, 118, 110, 0.2);
+      border-color: var(--teal);
+    }
+
+    .legend-dot.side {
+      background: #fff;
+      border-color: #8b9797;
+    }
+
+    #map {
+      width: 100%;
+      height: 420px;
+      min-height: 420px;
+      flex: none;
+      border-radius: 14px;
+      border: 1px solid var(--border);
+      overflow: hidden;
+      background: #f0f3f3;
+    }
+
+    .map-playback-controls {
+      margin-bottom: 10px;
+      display: flex;
+      flex-wrap: wrap;
+      gap: 8px;
+      align-items: center;
+    }
+
+    .map-step-status {
+      margin-left: auto;
+      color: var(--muted);
+    }
+
+    .map-stat-strip {
+      display: grid;
+      grid-template-columns: repeat(5, minmax(0, 1fr));
+      gap: 8px;
+      margin-bottom: 10px;
+      position: sticky;
+      top: 6px;
+      z-index: 400;
+      background: rgba(250, 250, 247, 0.96);
+      padding: 4px;
+      border-radius: 12px;
+      backdrop-filter: blur(6px);
+    }
+
+    .map-context-panel {
+      margin-bottom: 10px;
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      background: #fff;
+      padding: 10px 12px;
+      box-shadow: var(--shadow);
+      display: grid;
+      gap: 8px;
+    }
+
+    .map-context-head {
+      font-size: 12px;
+      color: var(--muted);
+      text-transform: uppercase;
+      letter-spacing: 0.04em;
+    }
+
+    .map-context-grid {
+      display: grid;
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+      gap: 8px;
+    }
+
+    .map-context-col {
+      border: 1px solid var(--border);
+      border-radius: 10px;
+      background: var(--surface-2);
+      padding: 8px;
+      font-size: 12px;
+      line-height: 1.45;
+    }
+
+    .transport-card details {
+      display: flex;
+      flex-direction: column;
+      flex: 1 1 auto;
+      min-height: 0;
+    }
+
+    .transport-card summary {
+      list-style: none;
+      cursor: pointer;
+      user-select: none;
+      font-family: "Playfair Display", Georgia, serif;
+      font-size: 1.35rem;
+      margin-bottom: var(--space-2);
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 10px;
+    }
+
+    .transport-card summary::-webkit-details-marker {
+      display: none;
+    }
+
+    .transport-content {
+      display: grid;
+      gap: var(--space-3);
+      min-height: 0;
+      height: 100%;
+    }
+
+    .transport-summary {
+      display: grid;
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+      gap: 10px;
+    }
+
+    .transport-stat {
+      background: var(--surface-2);
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      padding: 10px;
+      font-size: 13px;
+    }
+
+    .transport-stat strong {
+      display: block;
+      color: var(--muted);
+      font-size: 11px;
+      margin-bottom: 4px;
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+    }
+
+    .route-list {
+      display: grid;
+      gap: 8px;
+      flex: 1 1 auto;
+      min-height: 0;
+      max-height: 740px;
+      overflow-y: auto;
+      padding-right: 4px;
+    }
+
+    .route-leg {
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      background: #fff;
+      padding: 10px;
+      font-size: 13px;
+      transition: border-color var(--transition), background var(--transition);
+      cursor: pointer;
+    }
+
+    .route-leg.highlight {
+      border-color: rgba(15, 118, 110, 0.55);
+      border-width: 2px;
+      background: linear-gradient(180deg, #ffffff 0%, #f8fcfb 100%);
+    }
+
+    .route-leg.active {
+      border-color: var(--teal);
+      border-width: 3px;
+      box-shadow: 0 0 0 1px rgba(15, 118, 110, 0.3);
+      background: linear-gradient(180deg, #ffffff 0%, #f3fbfa 100%);
+    }
+
+    .mode {
+      display: inline-block;
+      border: 1px solid transparent;
+      border-radius: 999px;
+      padding: 2px 9px;
+      font-size: 11px;
+      font-weight: 600;
+      margin-right: 6px;
+      margin-bottom: 5px;
+      background: var(--teal-tint);
+      color: var(--teal);
+    }
+
+    .mode.car {
+      background: rgba(15, 118, 110, 0.14);
+      color: var(--teal-hover);
+      border-color: rgba(15, 118, 110, 0.2);
+    }
+
+    .mode.flight {
+      background: rgba(176, 141, 87, 0.15);
+      color: #7a5c2f;
+      border-color: rgba(176, 141, 87, 0.35);
+    }
+
+    .mode.train {
+      background: rgba(24, 121, 102, 0.1);
+      color: #176251;
+      border-color: rgba(24, 121, 102, 0.2);
+    }
+
+    .mode.ferry,
+    .mode.walk {
+      background: rgba(15, 118, 110, 0.08);
+      color: #0f5d58;
+      border-color: rgba(15, 118, 110, 0.22);
+    }
+
+    .stay-sequence-wrap {
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      background: var(--surface);
+      padding: 16px;
+      box-shadow: var(--shadow);
+      max-width: 100%;
+      overflow: hidden;
+    }
+
+    .stay-sequence {
+      width: 100%;
+      display: flex;
+      gap: 10px;
+      overflow-x: auto;
+      padding: 4px 2px 8px;
+      scrollbar-width: thin;
+      max-width: 100%;
+      min-width: 0;
+    }
+
+    .stay-segment {
+      border: 1px solid var(--border);
+      border-top: 3px solid rgba(15, 118, 110, 0.35);
+      background: linear-gradient(180deg, #fff 0%, #fbfcfb 100%);
+      border-radius: 14px;
+      min-width: 180px;
+      max-width: 240px;
+      flex: 0 0 clamp(180px, 25vw, 240px);
+      padding: 10px 12px;
+      font-size: 13px;
+      cursor: pointer;
+      transition: transform var(--transition), box-shadow var(--transition), border-color var(--transition);
+      text-align: left;
+    }
+
+    .stay-segment strong {
+      display: block;
+      overflow-wrap: anywhere;
+    }
+
+    .stay-segment:hover {
+      transform: translateY(-2px);
+      box-shadow: var(--shadow-hover);
+    }
+
+    .stay-segment.active {
+      border-color: rgba(15, 118, 110, 0.55);
+      box-shadow: 0 0 0 1px rgba(15, 118, 110, 0.2);
+      background: #f8fcfb;
+    }
+
+    .stay-segment .nights {
+      font-size: 12px;
+      color: var(--muted);
+    }
+
+    .stay-segment.is-collapsed {
+      display: none;
+    }
+
+    .stay-sequence-footer {
+      margin-top: 10px;
+      display: flex;
+      justify-content: flex-end;
+    }
+
+    .stay-sequence-toggle {
+      display: none;
+    }
+
+    .vibe-board-panel {
+      padding: 16px;
+      width: 100%;
+      max-width: 100%;
+      overflow: hidden;
+    }
+
+    .vibe-board-head {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      gap: 8px;
+      margin-bottom: 12px;
+      flex-wrap: wrap;
+    }
+
+    .vibe-board {
+      display: grid;
+      gap: 12px;
+      width: 100%;
+      max-width: 100%;
+      min-width: 0;
+    }
+
+    .vibe-cluster {
+      border: 1px solid var(--border);
+      border-radius: 14px;
+      background: #fff;
+      padding: 12px;
+      transition: border-color var(--transition), box-shadow var(--transition), opacity var(--transition);
+      width: 100%;
+      max-width: 100%;
+      min-width: 0;
+      overflow: hidden;
+    }
+
+    .vibe-cluster.active {
+      border-color: rgba(15, 118, 110, 0.62);
+      box-shadow: 0 0 0 1px rgba(15, 118, 110, 0.16);
+    }
+
+    .vibe-cluster.excluded {
+      opacity: 0.58;
+      border-style: dashed;
+      background: linear-gradient(180deg, #fff 0%, #fbfaf8 100%);
+    }
+
+    .vibe-cluster-head {
+      display: flex;
+      justify-content: space-between;
+      gap: 10px;
+      align-items: flex-start;
+      margin-bottom: 10px;
+      flex-wrap: wrap;
+    }
+
+    .vibe-cluster-head h3 {
+      margin-bottom: 4px;
+    }
+
+    .vibe-meta-line {
+      font-size: 12px;
+      color: var(--muted);
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      flex-wrap: wrap;
+    }
+
+    .vibe-priority {
+      display: inline-flex;
+      align-items: center;
+      border-radius: 999px;
+      padding: 4px 9px;
+      font-size: 11px;
+      font-weight: 700;
+      letter-spacing: 0.03em;
+      text-transform: uppercase;
+      border: 1px solid transparent;
+    }
+
+    .vibe-priority.must {
+      background: #eef6f5;
+      color: #155d59;
+      border-color: rgba(15, 118, 110, 0.3);
+    }
+
+    .vibe-priority.nice {
+      background: #f8f4ec;
+      color: #866234;
+      border-color: rgba(176, 141, 87, 0.35);
+    }
+
+    .vibe-priority.excluded {
+      background: #f7f2eb;
+      color: #845c2e;
+      border-color: rgba(176, 141, 87, 0.4);
+    }
+
+    .vibe-descriptor {
+      margin-top: 6px;
+      font-size: 13px;
+      color: #475756;
+    }
+
+    .vibe-coverage {
+      border-radius: 999px;
+      border: 1px solid var(--border);
+      padding: 4px 8px;
+      font-size: 11px;
+      font-weight: 600;
+      color: #6f5a33;
+      background: #faf6ef;
+      white-space: nowrap;
+    }
+
+    .vibe-coverage.warning {
+      color: #825a2e;
+      border-color: rgba(176, 141, 87, 0.38);
+    }
+
+    .vibe-reference-strip {
+      display: grid;
+      grid-auto-flow: column;
+      grid-auto-columns: minmax(340px, 420px);
+      gap: 10px;
+      overflow-x: auto;
+      overflow-y: hidden;
+      padding-bottom: 6px;
+      scrollbar-width: thin;
+      width: 100%;
+      max-width: 100%;
+      min-width: 0;
+    }
+
+    .vibe-tile {
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      padding: 10px;
+      min-height: 300px;
+      background: linear-gradient(165deg, #fbfcfc 0%, #f3f7f6 100%);
+      color: var(--text);
+      text-decoration: none;
+      display: flex;
+      flex-direction: column;
+      justify-content: flex-start;
+      gap: 10px;
+      transition: transform var(--transition), box-shadow var(--transition), border-color var(--transition);
+      width: 100%;
+      min-width: 0;
+    }
+
+    .vibe-tile.japan-guide {
+      background: linear-gradient(165deg, #fafdfc 0%, #eff7f4 100%);
+    }
+
+    .vibe-tile.partner-guide {
+      background: linear-gradient(165deg, #fdfbf8 0%, #f8f0e6 100%);
+    }
+
+    .vibe-tile:hover,
+    .vibe-tile:focus-visible {
+      text-decoration: none;
+      border-color: rgba(15, 118, 110, 0.45);
+      box-shadow: 0 10px 20px rgba(15, 118, 110, 0.12);
+      transform: translateY(-2px);
+    }
+
+    .vibe-tile-title {
+      font-size: 20px;
+      font-weight: 600;
+      line-height: 1.3;
+      margin: 0;
+    }
+
+    .vibe-tile-location {
+      margin: -4px 0 0;
+      font-size: 13px;
+      color: #4a5d5b;
+      font-weight: 600;
+    }
+
+    .vibe-image-wrap {
+      width: 100%;
+      aspect-ratio: 16 / 9;
+      border-radius: 10px;
+      overflow: hidden;
+      border: 1px solid rgba(15, 118, 110, 0.2);
+      background: #f1f3f2;
+      z-index: 1;
+    }
+
+    .vibe-tile-image {
+      width: 100%;
+      height: 100%;
+      display: block;
+      object-fit: cover;
+      filter: saturate(1.05) contrast(1.02);
+      transition: transform 220ms ease;
+    }
+
+    .vibe-tile:hover .vibe-tile-image,
+    .vibe-tile:focus-visible .vibe-tile-image {
+      transform: scale(1.03);
+    }
+
+    .vibe-tile-meta {
+      font-size: 14px;
+      line-height: 1.5;
+      color: #243230;
+      margin: 0;
+    }
+
+    .stats-grid {
+      display: grid;
+      grid-template-columns: repeat(4, minmax(0, 1fr));
+      gap: 10px;
+    }
+
+    .stat-card {
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      background: var(--surface-2);
+      padding: 10px;
+    }
+
+    .stat-card strong {
+      display: block;
+      font-size: 11px;
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+      color: var(--muted);
+      margin-bottom: 2px;
+    }
+
+    .pace-widget {
+      border-left: 2px solid rgba(15, 118, 110, 0.35);
+      padding-left: 10px;
+      margin-top: 6px;
+    }
+
+    .location-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+      gap: var(--space-3);
+    }
+
+    .location-card {
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      background: #fff;
+      padding: 16px;
+      box-shadow: var(--shadow);
+      transition: transform var(--transition), box-shadow var(--transition), border-color var(--transition);
+      display: grid;
+      gap: 12px;
+    }
+
+    .location-card:hover {
+      transform: translateY(-2px);
+      box-shadow: var(--shadow-hover);
+    }
+
+    .location-meta {
+      font-size: 12px;
+      color: var(--muted);
+      border-bottom: 1px solid var(--border);
+      padding-bottom: 8px;
+    }
+
+    .location-card ul {
+      margin: 0;
+      padding-left: 18px;
+      display: grid;
+      gap: 4px;
+      font-size: 13px;
+    }
+
+    .resource-row {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 8px;
+    }
+
+    .resource-link {
+      border: 1px solid rgba(15, 118, 110, 0.45);
+      border-radius: 10px;
+      background: #fff;
+      color: var(--teal);
+      padding: 7px 10px;
+      font-size: 12px;
+      font-weight: 600;
+      text-decoration: underline;
+      text-underline-offset: 2px;
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+    }
+
+    .resource-link::after {
+      content: "↗";
+      font-size: 11px;
+    }
+
+    .inclusion-pill {
+      display: inline-flex;
+      align-items: center;
+      border-radius: 999px;
+      padding: 4px 9px;
+      font-size: 11px;
+      font-weight: 700;
+      letter-spacing: 0.03em;
+      text-transform: uppercase;
+      border: 1px solid transparent;
+    }
+
+    .inclusion-pill.included {
+      background: var(--teal-tint);
+      color: var(--teal-hover);
+      border-color: rgba(15, 118, 110, 0.35);
+    }
+
+    .inclusion-pill.excluded {
+      background: #f7f2eb;
+      color: #8b5d29;
+      border-color: rgba(176, 141, 87, 0.45);
+    }
+
+    .location-card.excluded {
+      opacity: 0.78;
+      border-style: dashed;
+      background: linear-gradient(180deg, #fff 0%, #faf9f7 100%);
+    }
+
+    .location-card.excluded .location-meta {
+      border-bottom-style: dashed;
+    }
+
+    .timeline-layout {
+      display: grid;
+      grid-template-columns: minmax(0, 1fr);
+      gap: var(--space-3);
+      min-width: 0;
+    }
+
+    .flow-head {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 10px;
+      flex-wrap: wrap;
+    }
+
+    .base-editor-list {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
+      gap: 12px;
+    }
+
+    .base-editor {
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      padding: 12px;
+      background: #fff;
+      display: grid;
+      gap: 10px;
+      cursor: pointer;
+      transition: transform var(--transition), box-shadow var(--transition), border-color var(--transition);
+    }
+
+    .base-editor:hover {
+      transform: translateY(-2px);
+      box-shadow: var(--shadow-hover);
+    }
+
+    .base-editor.active {
+      border-color: rgba(15, 118, 110, 0.55);
+      box-shadow: 0 0 0 1px rgba(15, 118, 110, 0.17);
+    }
+
+    .editor-controls {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 8px;
+      flex-wrap: wrap;
+      font-size: 12px;
+    }
+
+    .tiny-actions {
+      display: inline-flex;
+      gap: 6px;
+      align-items: center;
+      flex-wrap: wrap;
+    }
+
+    .tiny-actions button {
+      padding: 5px 9px;
+      font-size: 12px;
+      border-radius: 8px;
+    }
+
+    .timeline {
+      position: relative;
+      display: grid;
+      gap: 16px;
+      padding-left: 6px;
+      min-width: 0;
+    }
+
+    .timeline::before {
+      content: "";
+      position: absolute;
+      left: 21px;
+      top: 8px;
+      bottom: 8px;
+      width: 2px;
+      background: rgba(15, 118, 110, 0.18);
+    }
+
+    .timeline-item {
+      display: grid;
+      grid-template-columns: 44px minmax(0, 1fr);
+      gap: 12px;
+      align-items: start;
+    }
+
+    .day-dot {
+      width: 34px;
+      height: 34px;
+      border-radius: 999px;
+      border: 2px solid rgba(15, 118, 110, 0.5);
+      background: #fff;
+      color: var(--teal);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-weight: 700;
+      font-size: 12px;
+      z-index: 1;
+      margin-top: 4px;
+    }
+
+    .day-card {
+      border: 1px solid var(--border);
+      border-radius: 14px;
+      background: #fff;
+      padding: 12px;
+      box-shadow: var(--shadow);
+      transition: border-color var(--transition), box-shadow var(--transition), transform var(--transition);
+    }
+
+    .day-card:hover {
+      transform: translateY(-2px);
+      box-shadow: var(--shadow-hover);
+    }
+
+    .day-card.active {
+      border-color: rgba(15, 118, 110, 0.6);
+      box-shadow: 0 0 0 1px rgba(15, 118, 110, 0.17), var(--shadow);
+      background: linear-gradient(180deg, #fff 0%, #f8fcfb 100%);
+    }
+
+    .day-header {
+      display: flex;
+      justify-content: space-between;
+      gap: 8px;
+      flex-wrap: wrap;
+      margin-bottom: 8px;
+      font-size: 13px;
+    }
+
+    .day-grid {
+      display: grid;
+      grid-template-columns: 1fr;
+      gap: 8px;
+      font-size: 12.5px;
+    }
+
+    .day-slot {
+      background: var(--surface-2);
+      border: 1px solid var(--border);
+      border-radius: 10px;
+      padding: 8px;
+    }
+
+    .day-slot strong {
+      display: block;
+      margin-bottom: 4px;
+      color: var(--muted);
+      font-size: 11px;
+      text-transform: uppercase;
+      letter-spacing: 0.04em;
+    }
+
+    .day-slot ul {
+      margin: 0;
+      padding-left: 18px;
+      display: grid;
+      gap: 4px;
+    }
+
+    .day-transfer {
+      border: 1px solid rgba(15, 118, 110, 0.26);
+      border-left: 4px solid rgba(15, 118, 110, 0.62);
+      border-radius: 10px;
+      background: #f8fcfb;
+      padding: 8px 10px;
+      font-size: 12.5px;
+      margin-bottom: 8px;
+    }
+
+    .day-car-event {
+      border: 1px solid rgba(176, 141, 87, 0.35);
+      border-left: 4px solid rgba(176, 141, 87, 0.72);
+      border-radius: 10px;
+      background: #fbf7ef;
+      padding: 8px 10px;
+      font-size: 12.5px;
+      margin-bottom: 8px;
+    }
+
+    .stays-grid,
+    .kids-grid,
+    .notes-grid {
+      display: grid;
+      gap: var(--space-3);
+      grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+    }
+
+    .stays-grid {
+      align-items: start;
+    }
+
+    .stay-card,
+    .kids-card,
+    .notes-card {
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      background: #fff;
+      padding: var(--space-3);
+      box-shadow: var(--shadow);
+      display: grid;
+      gap: 12px;
+    }
+
+    .stay-card ul,
+    .kids-card ul {
+      margin: 0;
+      padding-left: 18px;
+      display: grid;
+      gap: 4px;
+      font-size: 13px;
+    }
+
+    .hotel-suggestions {
+      border-top: 1px dashed var(--border);
+      padding-top: 10px;
+    }
+
+    .hotel-suggestions summary {
+      cursor: pointer;
+      color: var(--teal);
+      font-size: 13px;
+      font-weight: 600;
+    }
+
+    .hotel-list {
+      margin: 8px 0 0;
+      padding-left: 18px;
+      display: grid;
+      gap: 8px;
+      font-size: 13px;
+    }
+
+    .hotel-platform {
+      margin-top: 8px;
+    }
+
+    .hotel-list a {
+      color: var(--teal);
+      text-decoration: underline;
+      text-underline-offset: 2px;
+      font-weight: 600;
+    }
+
+    .stamp-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(130px, 1fr));
+      gap: 8px;
+    }
+
+    .stamp {
+      border: 1px dashed rgba(15, 118, 110, 0.35);
+      background: var(--teal-tint);
+      border-radius: 12px;
+      padding: 8px;
+      font-size: 12px;
+      color: var(--teal-hover);
+      display: flex;
+      gap: 6px;
+      align-items: center;
+    }
+
+    textarea {
+      width: 100%;
+      min-height: 130px;
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      padding: 10px 12px;
+      font: inherit;
+      font-size: 14px;
+      resize: vertical;
+      background: #fff;
+      color: var(--text);
+    }
+
+    .feedback-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(270px, 1fr));
+      gap: 12px;
+    }
+
+    .feedback-card {
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      padding: 12px;
+      background: var(--surface);
+      display: grid;
+      gap: 10px;
+    }
+
+    .feedback-questions {
+      display: grid;
+      gap: 10px;
+    }
+
+    .feedback-question {
+      display: grid;
+      gap: 5px;
+    }
+
+    .feedback-question label {
+      font-size: 13px;
+      color: var(--text);
+      font-weight: 600;
+    }
+
+    .prompt-output {
+      min-height: 170px;
+      background: var(--surface-2);
+    }
+
+    .quick-nav {
+      position: fixed;
+      top: 150px;
+      left: max(14px, calc((100vw - var(--max)) / 2 - 190px));
+      z-index: 980;
+      width: 170px;
+      border: 1px solid var(--border);
+      border-radius: 14px;
+      background: rgba(255, 255, 255, 0.95);
+      box-shadow: var(--shadow);
+      padding: 12px 10px;
+      display: none;
+    }
+
+    .quick-nav h3 {
+      font-size: 13px;
+      margin-bottom: 8px;
+      font-family: "Inter", "Segoe UI", sans-serif;
+      font-weight: 700;
+      color: var(--muted);
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+    }
+
+    .quick-nav a {
+      display: block;
+      font-size: 12px;
+      padding: 6px 8px;
+      border-radius: 8px;
+      color: var(--text);
+      border: 1px solid transparent;
+    }
+
+    .quick-nav a:hover {
+      color: var(--teal);
+      background: var(--teal-tint);
+      border-color: rgba(15, 118, 110, 0.25);
+      text-decoration: none;
+    }
+
+    .quick-nav a.is-active {
+      color: var(--teal);
+      background: var(--teal-tint);
+      border-color: rgba(15, 118, 110, 0.3);
+      font-weight: 600;
+    }
+
+    .timeline-placeholder {
+      font-size: 13px;
+      color: var(--muted);
+      padding: 8px 10px;
+      border: 1px dashed var(--border);
+      border-radius: 10px;
+      background: var(--surface-2);
+      margin-top: 8px;
+    }
+
+    .vote-row {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 8px;
+    }
+
+    .vote-row label {
+      border: 1px solid var(--border);
+      border-radius: 999px;
+      padding: 5px 9px;
+      font-size: 12px;
+      cursor: pointer;
+      background: #fff;
+    }
+
+    .leaflet-popup-content {
+      font-family: "Inter", "Segoe UI", sans-serif;
+      color: var(--text);
+      line-height: 1.45;
+      font-size: 13px;
+      margin: 10px 12px;
+    }
+
+    .leaflet-popup-content h4 {
+      font-family: "Playfair Display", Georgia, serif;
+      margin: 0 0 5px;
+      font-size: 1.02rem;
+    }
+
+    .base-marker {
+      width: 30px;
+      height: 30px;
+      border-radius: 999px;
+      border: 2px solid var(--teal);
+      background: #fff;
+      color: var(--teal);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 12px;
+      font-weight: 700;
+      box-shadow: 0 8px 18px rgba(15, 118, 110, 0.2);
+    }
+
+    .base-marker.selected {
+      background: var(--teal);
+      color: #fff;
+      border-color: var(--teal-hover);
+      box-shadow: 0 10px 22px rgba(15, 118, 110, 0.35);
+    }
+
+    :focus-visible {
+      outline: 2px solid rgba(15, 118, 110, 0.7);
+      outline-offset: 2px;
+      box-shadow: 0 0 0 3px rgba(15, 118, 110, 0.2);
+    }
+
+    @media (max-width: 1024px) {
+      .map-transport-grid {
+        grid-template-columns: 1fr;
+      }
+
+      .transport-card {
+        padding-top: 12px;
+      }
+
+      .map-card,
+      .transport-card {
+        height: auto;
+      }
+
+      #map {
+        height: 420px;
+        min-height: 0;
+        flex: none;
+      }
+
+      .route-list {
+        max-height: 520px;
+      }
+
+      .map-stat-strip {
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+      }
+
+      .quick-nav {
+        display: none !important;
+      }
+
+      .stats-grid {
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+      }
+
+      .day-grid {
+        grid-template-columns: 1fr;
+      }
+    }
+
+    @media (max-width: 760px) {
+      h1 {
+        font-size: clamp(1.9rem, 8vw, 2.15rem);
+      }
+
+      h2 {
+        font-size: 1.45rem;
+      }
+
+      body {
+        font-size: 14px;
+      }
+
+      main {
+        gap: var(--space-4);
+        padding-top: var(--space-4);
+      }
+
+      section {
+        scroll-margin-top: 120px;
+      }
+
+      body.header-expanded section {
+        scroll-margin-top: 260px;
+      }
+
+      .site-header .header-inner {
+        padding: 14px 0 10px;
+      }
+
+      .transport-card details:not([open]) .transport-content {
+        display: none;
+      }
+
+      .stay-sequence {
+        display: grid;
+        grid-auto-flow: column;
+        grid-auto-columns: minmax(170px, 75vw);
+      }
+
+      .stay-segment {
+        max-width: 75vw;
+        flex-basis: 75vw;
+      }
+
+      .stay-sequence-toggle {
+        display: inline-flex;
+      }
+
+      .map-topbar {
+        align-items: flex-start;
+      }
+
+      .chip-row {
+        width: 100%;
+      }
+
+      .chip-toggle {
+        flex: 1 1 auto;
+        text-align: center;
+      }
+
+      .map-context-grid {
+        grid-template-columns: 1fr;
+      }
+
+      #map {
+        height: 350px;
+      }
+
+      .route-list {
+        max-height: 460px;
+      }
+
+      .timeline-item {
+        grid-template-columns: 38px minmax(0, 1fr);
+      }
+
+      .day-dot {
+        width: 30px;
+        height: 30px;
+        font-size: 11px;
+      }
+
+      .vibe-cluster-head {
+        flex-direction: column;
+      }
+
+      .vibe-reference-strip {
+        grid-auto-columns: minmax(165px, 72vw);
+      }
+    }
+
+    @media (max-width: 430px) {
+      .container {
+        width: min(var(--max), 95vw);
+      }
+
+      main {
+        padding-bottom: 28px;
+      }
+
+      .site-header .header-inner {
+        width: min(var(--max), 95vw);
+      }
+
+      .options-grid,
+      .location-grid,
+      .base-editor-list,
+      .stays-grid,
+      .kids-grid,
+      .notes-grid,
+      .feedback-grid {
+        grid-template-columns: 1fr;
+      }
+
+      .stat-pill,
+      .toggle-pill {
+        font-size: 12px;
+      }
+
+      .map-stat-strip {
+        gap: 6px;
+      }
+
+      .transport-stat {
+        padding: 8px;
+      }
+
+      #map {
+        height: 310px;
+      }
+
+      .map-step-status {
+        margin-left: 0;
+        width: 100%;
+      }
+
+      .vibe-reference-strip {
+        grid-auto-columns: minmax(150px, 82vw);
+      }
+    }
+
+    @media (min-width: 1025px) {
+      .transport-card summary {
+        pointer-events: none;
+      }
+
+      .transport-card summary::after {
+        content: "";
+      }
+
+      .quick-nav {
+        display: block;
+      }
+    }
+
+    @media print {
+      body {
+        background: #fff;
+      }
+
+      .site-header {
+        position: static;
+        background: #fff;
+      }
+
+      .panel,
+      .map-card,
+      .transport-card,
+      .option-card,
+      .location-card,
+      .day-card,
+      .stay-card,
+      .kids-card,
+      .notes-card,
+      .feedback-card,
+      .stay-sequence-wrap,
+      .base-editor,
+      .route-leg {
+        box-shadow: none !important;
+      }
+
+      button,
+      .jump-nav,
+      .quick-nav,
+      .chip-row,
+      .btn-row,
+      #map,
+      .toggle-pill {
+        display: none !important;
+      }
+
+      .map-transport-grid,
+      .location-grid,
+      .feedback-grid,
+      .timeline,
+      .base-editor-list,
+      .vibe-board,
+      .stays-grid,
+      .kids-grid,
+      .notes-grid {
+        display: block;
+      }
+
+      section,
+      .panel,
+      .location-card,
+      .stay-card,
+      .kids-card,
+      .notes-card,
+      .feedback-card,
+      .day-card,
+      .vibe-cluster,
+      .base-editor,
+      .route-leg {
+        page-break-inside: avoid;
+        margin-bottom: 10px;
+      }
+
+      .vibe-reference-strip {
+        display: block;
+        overflow: visible;
+      }
+
+      .vibe-tile {
+        min-height: auto;
+        margin-bottom: 8px;
+      }
+    }
+  </style>
+</head>
+<body class="header-collapsed">
+  <header class="site-header is-collapsed">
+    <div class="header-inner">
+      <div class="title-line">
+        <div>
+          <h1>Kyushu Family Itinerary Options</h1>
+          <p class="trip-dates">Trip window: 10 Dec 2026 to 05 Jan 2027 (26 nights)</p>
+        </div>
+        <button type="button" id="headerToggle" class="btn-secondary header-toggle" aria-expanded="false" aria-controls="tripStatsRow">
+          Expand header
+        </button>
+      </div>
+
+      <div class="stats-row" id="tripStatsRow">
+        <span class="stat-pill"><strong>Nights:</strong> <span id="headerNights">0</span></span>
+        <span class="stat-pill"><strong>Bases:</strong> <span id="headerBases">0</span></span>
+        <span class="stat-pill"><strong>Driving days:</strong> <span id="headerDrivingDays">0</span></span>
+        <label class="toggle-pill" for="busanToggle">
+          <input type="checkbox" id="busanToggle" checked />
+          Optional Busan
+        </label>
+      </div>
+
+      <nav class="jump-nav" aria-label="Jump to section">
+        <a href="#map-section">Map</a>
+        <a href="#vibe-board">Vibe Board</a>
+        <a href="#itinerary">Itinerary</a>
+        <a href="#stays">Stays</a>
+        <a href="#costings">Costings</a>
+        <a href="#locations">Locations</a>
+        <a href="#kids">Kids</a>
+        <a href="#notes">Notes</a>
+      </nav>
+    </div>
+  </header>
+
+  <aside class="quick-nav" aria-label="Quick section navigation">
+    <h3>Quick Nav</h3>
+    <a href="#options">Options</a>
+    <a href="#map-section">Map & Transport</a>
+    <a href="#stays-sequence">Stay Sequence</a>
+    <a href="#vibe-board">Vibe Board</a>
+    <a href="#itinerary">Itinerary</a>
+    <a href="#stays">Stays</a>
+    <a href="#costings">Costings</a>
+    <a href="#locations">Locations</a>
+    <a href="#kids">Kids</a>
+    <a href="#notes">Notes</a>
+  </aside>
+
+  <main class="container">
+    <section id="options">
+      <div>
+        <h2>Itinerary Options</h2>
+        <p class="section-intro">Click a card to select an option and compare pace, transitions, and transport effort.</p>
+      </div>
+      <div class="options-grid" id="packageCards"></div>
+    </section>
+
+    <section id="map-section">
+      <div>
+        <h2>Route Map & Commute Planner</h2>
+        <p class="section-intro">Map remains primary, with the commute narrative and mode notes shown side-by-side.</p>
+      </div>
+      <div class="map-transport-grid">
+        <article class="map-card">
+          <div class="map-stat-strip">
+            <div class="transport-stat"><strong>Total legs</strong><span id="transportLegCount">0</span></div>
+            <div class="transport-stat"><strong>Driving legs</strong><span id="transportDrivingCount">0</span></div>
+            <div class="transport-stat"><strong>Estimated moving time</strong><span id="transportHours">0h</span></div>
+            <div class="transport-stat"><strong>Car hire window</strong><span id="transportCarWindow">-</span></div>
+          </div>
+          <div class="map-playback-controls" aria-label="Map playback controls">
+            <button type="button" id="mapStepBack" class="btn-soft">Back</button>
+            <button type="button" id="mapStepNext" class="btn-soft">Next</button>
+            <button type="button" id="mapStartOver" class="btn-secondary">Start over</button>
+            <span id="mapStepStatus" class="small map-step-status">Step through overnight bases</span>
+          </div>
+          <div id="map" role="img" aria-label="Interactive route map"></div>
+          <div id="mapSelectionContext" class="map-context-panel"></div>
+          <p class="small" style="margin-top: 10px;">Click a commute leg or map marker to focus context, or use Back/Next to step through overnight bases.</p>
+        </article>
+
+        <article class="transport-card">
+          <details id="transportDetails" open>
+            <summary>Commute & Transport Mode</summary>
+            <div class="transport-content">
+              <div id="legList" class="route-list"></div>
+            </div>
+          </details>
+        </article>
+      </div>
+    </section>
+
+    <section id="stays-sequence">
+      <div class="stay-sequence-wrap">
+        <h2>Stay Sequence</h2>
+        <p class="section-intro">Click a segment to jump to that base in the itinerary and highlight related markers on the map.</p>
+        <div class="stay-sequence" id="staySequence"></div>
+        <div class="stay-sequence-footer">
+          <button type="button" id="staySequenceToggle" class="btn-secondary stay-sequence-toggle">Show more</button>
+        </div>
+      </div>
+    </section>
+
+    <section id="vibe-board">
+      <div>
+        <h2>Global Vibe Board</h2>
+        <p class="section-intro">Visual decision layer grouped by location. Tiles use curated destination references from Japan-Guide and the Busan source article for a consistent research baseline.</p>
+      </div>
+      <article class="panel vibe-board-panel hoverable">
+        <div class="vibe-board-head">
+          <p class="small" id="vibeBoardMeta">Loading visual references...</p>
+        </div>
+        <div id="vibeBoard" class="vibe-board"></div>
+      </article>
+    </section>
+
+    <section id="itinerary">
+      <div>
+        <h2>Itinerary Timeline</h2>
+        <p class="section-intro">Review base order and night allocation, then check the timeline by day. Click any base card to highlight it across the itinerary and map.</p>
+      </div>
+      <article class="panel hoverable">
+        <div class="stats-grid">
+          <div class="stat-card"><strong>Total nights</strong><span id="mNights">0</span></div>
+          <div class="stat-card"><strong>Transitions</strong><span id="mLegs">0</span></div>
+          <div class="stat-card"><strong>Car hire days</strong><span id="mCarDays">0</span></div>
+          <div class="stat-card"><strong>Pace score</strong><span id="mPace">0/100</span></div>
+        </div>
+        <div class="pace-widget small" id="paceWidgetText" style="margin-top: 10px;"></div>
+      </article>
+
+      <div class="timeline-layout">
+        <div>
+          <h3>Base Order & Nights</h3>
+          <div class="base-editor-list" id="baseEditorList"></div>
+        </div>
+
+        <div>
+          <div class="flow-head">
+            <h3>Daily Flow</h3>
+            <button type="button" id="exportTimelineXlsx" class="btn-secondary">Export Daily Flow (XLSX)</button>
+          </div>
+          <p class="timeline-placeholder">Daily ideas are paired with transfer line items when a base change is required.</p>
+          <div id="itineraryTimeline" class="timeline"></div>
+        </div>
+      </div>
+    </section>
+
+    <section id="stays">
+      <div>
+        <h2>Accommodation Styles</h2>
+        <p class="section-intro">Suggested stay profiles by base to balance parking, transit access, and family recovery time.</p>
+      </div>
+      <div id="stayCards" class="stays-grid"></div>
+    </section>
+
+    <section id="costings">
+      <div>
+        <h2>Detailed Cost Estimate</h2>
+        <p class="section-intro">Estimate covers transport, bullet train/ferry/flight, car hire, and hotels only. Family profile is fixed at 2 adults + 2 children (8yo, 4yo). Main SYD-HND flights are excluded as purchased.</p>
+      </div>
+      <article class="panel">
+        <div class="stats-grid">
+          <div class="stat-card"><strong>Selected option</strong><span id="costingOptionTitle">-</span></div>
+          <div class="stat-card"><strong>Low estimate</strong><span id="costingLow">¥0</span></div>
+          <div class="stat-card"><strong>Mid estimate</strong><span id="costingMid">¥0</span></div>
+          <div class="stat-card"><strong>High estimate</strong><span id="costingHigh">¥0</span></div>
+        </div>
+        <p class="small" id="costingAssumptions" style="margin-top: 10px;"></p>
+      </article>
+      <article class="panel">
+        <div class="table-wrap cost-table-wrap">
+          <table class="cost-table">
+            <thead>
+              <tr>
+                <th>Cost Type</th>
+                <th>Segment / Location</th>
+                <th>Mode / Basis</th>
+                <th>Quantity</th>
+                <th>Unit (JPY)</th>
+                <th>Low</th>
+                <th>Mid</th>
+                <th>High</th>
+                <th>Source / Notes</th>
+              </tr>
+            </thead>
+            <tbody id="costingTableBody"></tbody>
+            <tfoot>
+              <tr>
+                <th colspan="5">Total</th>
+                <th id="costingTotalLow">¥0</th>
+                <th id="costingTotalMid">¥0</th>
+                <th id="costingTotalHigh">¥0</th>
+                <th>Indicative only; live rates vary.</th>
+              </tr>
+            </tfoot>
+          </table>
+        </div>
+      </article>
+    </section>
+
+    <section id="locations">
+      <div>
+        <h2>Location Directory</h2>
+        <p class="section-intro">Use this section to introduce all possible places for the selected option. Cards are clearly marked as included or excluded.</p>
+      </div>
+      <div id="locationCards" class="location-grid"></div>
+    </section>
+
+    <section id="kids">
+      <div>
+        <h2>Kids Mission & Stamp Tracker</h2>
+        <p class="section-intro">Simple mission board for an 8-year-old and 4-year-old with lightweight achievements per destination.</p>
+      </div>
+      <div class="kids-grid">
+        <article class="kids-card">
+          <h3>Mission Board</h3>
+          <ul id="kidsMissionList"></ul>
+        </article>
+        <article class="kids-card">
+          <h3>Stamp Tracker</h3>
+          <div class="stamp-grid" id="stampTracker"></div>
+        </article>
+      </div>
+    </section>
+
+    <section id="notes">
+      <div>
+        <h2>Notes</h2>
+        <p class="section-intro">Capture stakeholder concerns, trade-offs, and final decisions for each option.</p>
+      </div>
+      <div class="notes-grid">
+        <article class="notes-card">
+          <h3>Trip Notes</h3>
+          <textarea id="tripNotes" placeholder="Record family preferences, risk items, and decisions here..."></textarea>
+        </article>
+        <article class="notes-card">
+          <h3>Option Feedback Prompt Builder</h3>
+          <div class="feedback-questions">
+            <div class="feedback-question">
+              <label for="qMustKeep">1) What moments are non-negotiable for this option?</label>
+              <textarea id="qMustKeep" placeholder="Example: Beppu family onsen, Sakurajima ferry day..."></textarea>
+            </div>
+            <div class="feedback-question">
+              <label for="qHardParts">2) Which transfers or days feel hardest for the family?</label>
+              <textarea id="qHardParts" placeholder="Example: Long driving day with low nap flexibility..."></textarea>
+            </div>
+            <div class="feedback-question">
+              <label for="qTradeoffs">3) If we must simplify, what should be cut first?</label>
+              <textarea id="qTradeoffs" placeholder="Example: Busan module, one southern base, etc..."></textarea>
+            </div>
+            <div class="feedback-question">
+              <label for="qKidsNeeds">4) What kid constraints must we respect (8yo + 4yo)?</label>
+              <textarea id="qKidsNeeds" placeholder="Example: Max transfer time, nap windows, indoor backups..."></textarea>
+            </div>
+            <div class="feedback-question">
+              <label for="qSuccess">5) What does a successful trip look like?</label>
+              <textarea id="qSuccess" placeholder="Example: Relaxed pace, minimal meltdowns, 3 highlight memories..."></textarea>
+            </div>
+            <div class="btn-row">
+              <button type="button" id="copyAiContextBtn" class="btn-primary">Copy AI Context Prompt</button>
+            </div>
+            <div class="feedback-question">
+              <label for="aiContextOutput">Prompt preview</label>
+              <textarea id="aiContextOutput" class="prompt-output" placeholder="Generated prompt context will appear here."></textarea>
+            </div>
+          </div>
+        </article>
+      </div>
+    </section>
+  </main>
+
+  <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js" integrity="sha256-20nQCchB9co0qIjJZRGuk2/Z9VM+kNiyxNV1lvTlZBo=" crossorigin=""></script>
+  <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
+  <script>
+    const tripStart = new Date("2026-12-10T00:00:00");
+    const tripEnd = new Date("2027-01-05T00:00:00");
+
+    const locations = {
+      tokyo: {
+        id: "tokyo",
+        name: "Tokyo",
+        region: "Tokyo",
+        priority: "Must-do",
+        lat: 35.6762,
+        lng: 139.6503,
+        stayArea: "Shinjuku, Ueno, or Tokyo Station side",
+        whyStay: "Jetlag buffer at start, shopping/laundry buffer at end, and Haneda access.",
+        things: [
+          "TeamLab or science museum half-day for kids",
+          "Ueno Park + zoo or playground rotation",
+          "Character stores / themed cafe mission",
+          "Department food hall picnic challenge",
+          "One observation deck evening"
+        ]
+      },
+      fukuoka: {
+        id: "fukuoka",
+        name: "Fukuoka",
+        region: "Kyushu",
+        priority: "Must-do",
+        lat: 33.5902,
+        lng: 130.4017,
+        stayArea: "Hakata area or waterfront with parking",
+        whyStay: "Low-friction city for transition into Kyushu and flexible day trips.",
+        things: [
+          "Marine World or city aquarium option",
+          "Canal City and easy indoor backup day",
+          "Yatai dinner walk (short, low-pressure)",
+          "Simple recovery day with laundry + park",
+          "Optional Kitakyushu side mission"
+        ]
+      },
+      kitakyushu: {
+        id: "kitakyushu",
+        name: "Kitakyushu",
+        region: "Kyushu",
+        priority: "Nice-to-have",
+        lat: 33.8833,
+        lng: 130.875,
+        stayArea: "Usually day trip from Fukuoka",
+        whyStay: "Adds variety with trains/waterfront without mandatory overnight.",
+        things: [
+          "Mojiko Retro waterfront stroll",
+          "Kyushu Railway History Museum",
+          "Short family photo stop at retro station",
+          "Indoor museum fallback in wet weather"
+        ]
+      },
+      hiroshima: {
+        id: "hiroshima",
+        name: "Hiroshima",
+        region: "Honshu",
+        priority: "Nice-to-have",
+        lat: 34.3853,
+        lng: 132.4553,
+        stayArea: "Peace Park / Hiroshima Station corridor",
+        whyStay: "Adds meaningful history and useful base for Okayama side visit.",
+        things: [
+          "Peace Park and museum with age-appropriate pacing",
+          "Miyajima ferry day if energy is high",
+          "Okonomiyaki local dinner experience",
+          "Tram ride as low-effort city sightseeing"
+        ]
+      },
+      okayama: {
+        id: "okayama",
+        name: "Okayama",
+        region: "Honshu",
+        priority: "Nice-to-have",
+        lat: 34.6551,
+        lng: 133.9195,
+        stayArea: "Best as day trip from Hiroshima",
+        whyStay: "Fits as a lighter side day rather than another check-in/out.",
+        things: [
+          "Korakuen garden easy stroll",
+          "Castle exterior and family photo loop",
+          "Station-area food and rest break",
+          "Quick return to Hiroshima for low-stress evening"
+        ]
+      },
+      busan: {
+        id: "busan",
+        name: "Busan",
+        region: "Korea",
+        priority: "Nice-to-have",
+        lat: 35.1796,
+        lng: 129.0756,
+        stayArea: "Seomyeon or Haeundae (single base)",
+        whyStay: "Optional contrast city with coast + food, if inserted as one block.",
+        things: [
+          "Haeundae beach walk and aquarium",
+          "Jagalchi market tasting circuit",
+          "Gamcheon cultural village short visit",
+          "Sky capsule/coastal rail activity",
+          "One no-rush shopping + cafe day"
+        ]
+      },
+      beppu: {
+        id: "beppu",
+        name: "Beppu",
+        region: "Kyushu",
+        priority: "Must-do",
+        lat: 33.2795,
+        lng: 131.4975,
+        stayArea: "Onsen district with family bath options",
+        whyStay: "Easy onsen base with flexible pacing and kid-friendly options.",
+        things: [
+          "Jigoku (hells) split across 1-2 easy sessions",
+          "Family/private onsen booking",
+          "Foot-bath and local snack lanes",
+          "Low-intensity half day after drive"
+        ]
+      },
+      yufuin: {
+        id: "yufuin",
+        name: "Yufuin",
+        region: "Kyushu",
+        priority: "Must-do",
+        lat: 33.2648,
+        lng: 131.354,
+        stayArea: "Day trip from Beppu or 1-night ryokan",
+        whyStay: "Scenic onsen-town atmosphere and easy walking pace.",
+        things: [
+          "Kinrin Lake morning walk",
+          "Slow shopping street snack crawl",
+          "Light mountain-view photos",
+          "Early return for bath/nap reset"
+        ]
+      },
+      takachiho: {
+        id: "takachiho",
+        name: "Takachiho Gorge",
+        region: "Kyushu",
+        priority: "Must-do",
+        lat: 32.7117,
+        lng: 131.3009,
+        stayArea: "Town center lodging near gorge access",
+        whyStay: "Signature nature day and fewer crowds with overnight timing.",
+        things: [
+          "Early gorge boat queue",
+          "Nature walk and waterfall viewpoints",
+          "Shrine or folklore stop",
+          "Simple early evening and rest"
+        ]
+      },
+      miyazaki: {
+        id: "miyazaki",
+        name: "Miyazaki",
+        region: "Kyushu",
+        priority: "Must-do",
+        lat: 31.9077,
+        lng: 131.4202,
+        stayArea: "Coastal hotel zone or city center with parking",
+        whyStay: "Coastal scenic-drive segment and recovery-friendly rhythm.",
+        things: [
+          "Aoshima and Devil's Washboard coastline",
+          "Beach/park reset time for kids",
+          "Short ocean road loop",
+          "Cafe and indoor weather backup"
+        ]
+      },
+      kagoshima: {
+        id: "kagoshima",
+        name: "Kagoshima",
+        region: "Kyushu",
+        priority: "Must-do",
+        lat: 31.5966,
+        lng: 130.5571,
+        stayArea: "City center near ferry access",
+        whyStay: "Best long southern base with volcano wow factor and side trips.",
+        things: [
+          "Sakurajima ferry and viewpoints",
+          "Ibusuki or Kirishima side-day option",
+          "Waterfront family evening walks",
+          "Laundry + flexible no-drive day",
+          "Local food market exploration"
+        ]
+      }
+    };
+
+    const legCatalog = {
+      tokyo_hiroshima: {
+        primaryMode: "Bullet Train",
+        modeClass: "train",
+        time: "~4h05",
+        hours: 4.1,
+        alternatives: [
+          { mode: "Plane", time: "~1h20 flight + airport overhead (~3h total)", className: "flight" },
+          { mode: "Car", time: "~10-11h", className: "car" }
+        ],
+        carNote: "No rental needed yet; keep luggage simple on train."
+      },
+      hiroshima_fukuoka: {
+        primaryMode: "Bullet Train",
+        modeClass: "train",
+        time: "~1h05",
+        hours: 1.1,
+        alternatives: [
+          { mode: "Car", time: "~3.5h", className: "car" },
+          { mode: "Regional train", time: "~2.5-3h", className: "train" }
+        ],
+        carNote: "Do not hire car for this leg unless you already started driving."
+      },
+      fukuoka_busan: {
+        primaryMode: "Ferry",
+        modeClass: "ferry",
+        time: "12:30 → 18:30 (~6h day ferry)",
+        hours: 6,
+        alternatives: [
+          { mode: "Flight", time: "~1h + airport overhead (~3h door-to-door)", className: "flight" }
+        ],
+        carNote: "Camellia Line daytime sailing. Keep luggage compact for cabin boarding and immigration."
+      },
+      busan_fukuoka: {
+        primaryMode: "Ferry",
+        modeClass: "ferry",
+        time: "20:00 → 07:30 next day (~11h30 overnight)",
+        hours: 11.5,
+        alternatives: [
+          { mode: "Flight", time: "~1h + airport overhead (~3h door-to-door)", className: "flight" }
+        ],
+        carNote: "Camellia Line overnight sailing; sleep onboard and start Kyushu car segment after Hakata arrival."
+      },
+      fukuoka_beppu: {
+        primaryMode: "Car",
+        modeClass: "car",
+        time: "~2h30-3h",
+        hours: 2.8,
+        alternatives: [
+          { mode: "Limited express train", time: "~2h + local transfer", className: "train" },
+          { mode: "Bus", time: "~2h30-3h", className: "train" }
+        ],
+        carNote: "Recommended rental pickup point for Kyushu loop."
+      },
+      beppu_takachiho: {
+        primaryMode: "Car",
+        modeClass: "car",
+        time: "~2h45-3h",
+        hours: 2.9,
+        alternatives: [
+          { mode: "Public transport combo", time: "~4.5h+", className: "train" }
+        ],
+        carNote: "Car strongly preferred; public transport is slower and less flexible."
+      },
+      takachiho_miyazaki: {
+        primaryMode: "Car",
+        modeClass: "car",
+        time: "~2h15",
+        hours: 2.3,
+        alternatives: [
+          { mode: "Bus + train", time: "~3.5-4.5h", className: "train" }
+        ],
+        carNote: "Keep same rental to avoid extra handovers."
+      },
+      miyazaki_kagoshima: {
+        primaryMode: "Car",
+        modeClass: "car",
+        time: "~2h30-3h",
+        hours: 2.8,
+        alternatives: [
+          { mode: "Limited express train", time: "~2h10-2h30", className: "train" }
+        ],
+        carNote: "Car keeps side-trip flexibility and luggage convenience."
+      },
+      kagoshima_tokyo: {
+        primaryMode: "Plane",
+        modeClass: "flight",
+        time: "~1h50 flight + airport overhead (~3.5h total)",
+        hours: 3.5,
+        alternatives: [
+          { mode: "Bullet train", time: "~6h50-7h30", className: "train" }
+        ],
+        carNote: "Return rental in Kagoshima before flight."
+      },
+      tokyo_fukuoka: {
+        primaryMode: "Plane",
+        modeClass: "flight",
+        time: "~1h55 flight + airport overhead (~3.5h total)",
+        hours: 3.5,
+        alternatives: [
+          { mode: "Bullet train", time: "~5h", className: "train" }
+        ],
+        carNote: "Car pickup can be delayed until Kyushu intercity drive starts."
+      }
+    };
+
+    const packages = {
+      option1: {
+        id: "option1",
+        title: "Option 1 - Everything (Must-do + Nice-to-have, includes Busan)",
+        summary: "Most comprehensive package. Adds Busan + all Nice-to-have destinations, with an overnight Busan → Fukuoka ferry before the Kyushu road loop.",
+        stops: [
+          { id: "tokyo_arrive", locationId: "tokyo", label: "Tokyo (Arrival)", nights: 3 },
+          { id: "hiroshima_base", locationId: "hiroshima", label: "Hiroshima", nights: 2, sideVisits: ["okayama"] },
+          { id: "fukuoka_north", locationId: "fukuoka", label: "Fukuoka", nights: 2, sideVisits: ["kitakyushu"] },
+          { id: "busan_module", locationId: "busan", label: "Busan (Optional Module)", nights: 5 },
+          {
+            id: "fukuoka_drive_start",
+            locationId: "fukuoka",
+            label: "Busan → Fukuoka Ferry (Overnight, Car Start)",
+            nights: 1,
+            isTransitNight: true,
+            note: "Official Camellia Line New Camellia overnight service: departs Busan 20:00, arrives Hakata/Fukuoka 07:30 next day (11h30). Car pickup starts after disembarkation."
+          },
+          { id: "beppu_base", locationId: "beppu", label: "Beppu", nights: 4, sideVisits: ["yufuin"] },
+          { id: "takachiho_base", locationId: "takachiho", label: "Takachiho", nights: 2 },
+          { id: "miyazaki_base", locationId: "miyazaki", label: "Miyazaki", nights: 2 },
+          { id: "kagoshima_base", locationId: "kagoshima", label: "Kagoshima", nights: 2 },
+          { id: "tokyo_depart", locationId: "tokyo", label: "Tokyo (Departure)", nights: 3 }
+        ],
+        legs: [
+          { from: "tokyo_arrive", to: "hiroshima_base", legKey: "tokyo_hiroshima" },
+          { from: "hiroshima_base", to: "fukuoka_north", legKey: "hiroshima_fukuoka" },
+          { from: "fukuoka_north", to: "busan_module", legKey: "fukuoka_busan" },
+          { from: "busan_module", to: "fukuoka_drive_start", legKey: "busan_fukuoka" },
+          { from: "fukuoka_drive_start", to: "beppu_base", legKey: "fukuoka_beppu" },
+          { from: "beppu_base", to: "takachiho_base", legKey: "beppu_takachiho" },
+          { from: "takachiho_base", to: "miyazaki_base", legKey: "takachiho_miyazaki" },
+          { from: "miyazaki_base", to: "kagoshima_base", legKey: "miyazaki_kagoshima" },
+          { from: "kagoshima_base", to: "tokyo_depart", legKey: "kagoshima_tokyo" }
+        ],
+        carPlan: {
+          pickupStopId: "fukuoka_drive_start",
+          pickupTiming: "end",
+          returnStopId: "kagoshima_base",
+          returnTiming: "end",
+          note: "Pickup starts after the overnight Busan → Fukuoka ferry arrival, then keep one continuous rental across the Kyushu southbound loop."
+        },
+        excludedNote: "Kyoto / Gion / Kiyomizumichi excluded to avoid repetition from prior trips."
+      },
+      option2: {
+        id: "option2",
+        title: "Option 2 - Everything (Must-do + Nice-to-have), no Busan",
+        summary: "Comprehensive Japan-only package. Keeps Nice-to-have stops while reducing international crossing complexity.",
+        stops: [
+          { id: "tokyo_arrive", locationId: "tokyo", label: "Tokyo (Arrival)", nights: 3 },
+          { id: "hiroshima_base", locationId: "hiroshima", label: "Hiroshima", nights: 2, sideVisits: ["okayama"] },
+          { id: "fukuoka_base", locationId: "fukuoka", label: "Fukuoka", nights: 4, sideVisits: ["kitakyushu"] },
+          { id: "beppu_base", locationId: "beppu", label: "Beppu", nights: 4, sideVisits: ["yufuin"] },
+          { id: "takachiho_base", locationId: "takachiho", label: "Takachiho", nights: 2 },
+          { id: "miyazaki_base", locationId: "miyazaki", label: "Miyazaki", nights: 3 },
+          { id: "kagoshima_base", locationId: "kagoshima", label: "Kagoshima", nights: 5 },
+          { id: "tokyo_depart", locationId: "tokyo", label: "Tokyo (Departure)", nights: 3 }
+        ],
+        legs: [
+          { from: "tokyo_arrive", to: "hiroshima_base", legKey: "tokyo_hiroshima" },
+          { from: "hiroshima_base", to: "fukuoka_base", legKey: "hiroshima_fukuoka" },
+          { from: "fukuoka_base", to: "beppu_base", legKey: "fukuoka_beppu" },
+          { from: "beppu_base", to: "takachiho_base", legKey: "beppu_takachiho" },
+          { from: "takachiho_base", to: "miyazaki_base", legKey: "takachiho_miyazaki" },
+          { from: "miyazaki_base", to: "kagoshima_base", legKey: "miyazaki_kagoshima" },
+          { from: "kagoshima_base", to: "tokyo_depart", legKey: "kagoshima_tokyo" }
+        ],
+        carPlan: {
+          pickupStopId: "fukuoka_base",
+          pickupTiming: "end",
+          returnStopId: "kagoshima_base",
+          returnTiming: "end",
+          note: "Start rental in Fukuoka after city segment; keep same vehicle through Beppu, Takachiho, Miyazaki, and Kagoshima."
+        },
+        excludedNote: "Busan removed; all other Must-do + Nice-to-have locations retained."
+      },
+      option3: {
+        id: "option3",
+        title: "Option 3 - Just Must-do",
+        summary: "Lowest complexity package focused on Kyushu strengths and slower family pacing.",
+        stops: [
+          { id: "tokyo_arrive", locationId: "tokyo", label: "Tokyo (Arrival)", nights: 3 },
+          { id: "fukuoka_base", locationId: "fukuoka", label: "Fukuoka", nights: 4 },
+          { id: "beppu_base", locationId: "beppu", label: "Beppu", nights: 5, sideVisits: ["yufuin"] },
+          { id: "takachiho_base", locationId: "takachiho", label: "Takachiho", nights: 2 },
+          { id: "miyazaki_base", locationId: "miyazaki", label: "Miyazaki", nights: 4 },
+          { id: "kagoshima_base", locationId: "kagoshima", label: "Kagoshima", nights: 5 },
+          { id: "tokyo_depart", locationId: "tokyo", label: "Tokyo (Departure)", nights: 3 }
+        ],
+        legs: [
+          { from: "tokyo_arrive", to: "fukuoka_base", legKey: "tokyo_fukuoka" },
+          { from: "fukuoka_base", to: "beppu_base", legKey: "fukuoka_beppu" },
+          { from: "beppu_base", to: "takachiho_base", legKey: "beppu_takachiho" },
+          { from: "takachiho_base", to: "miyazaki_base", legKey: "takachiho_miyazaki" },
+          { from: "miyazaki_base", to: "kagoshima_base", legKey: "miyazaki_kagoshima" },
+          { from: "kagoshima_base", to: "tokyo_depart", legKey: "kagoshima_tokyo" }
+        ],
+        carPlan: {
+          pickupStopId: "fukuoka_base",
+          pickupTiming: "end",
+          returnStopId: "kagoshima_base",
+          returnTiming: "end",
+          note: "Most efficient rental profile: one pickup in Fukuoka, one return in Kagoshima, no mid-loop handover."
+        },
+        excludedNote: "All Nice-to-have locations (Hiroshima, Okayama, Kitakyushu, Busan) are removed for pace and simplicity."
+      }
+    };
+
+    const editablePackages = JSON.parse(JSON.stringify(packages));
+
+    const sourceLibrary = {
+      japanGuideHome: {
+        label: "Japan-Guide",
+        url: "https://www.japan-guide.com/"
+      },
+      camellia: {
+        fare: { label: "Camellia Line Fare", url: "https://www.camellia-line.co.jp/fare/" },
+        schedule: { label: "Camellia Line Timetable", url: "https://www.camellia-line.co.jp/dia/" },
+        pamphlet: { label: "Camellia Line Brochure (PDF)", url: "https://www.camellia-line.co.jp/_wp/wp-content/uploads/2024/08/camellia-line-pamphlet-english.pdf" }
+      },
+      guides: {
+        tokyo: { label: "Japan-Guide Tokyo", url: "https://www.japan-guide.com/e/e2164.html" },
+        hiroshima: { label: "Japan-Guide Hiroshima", url: "https://www.japan-guide.com/e/e2160.html" },
+        okayama: { label: "Japan-Guide Okayama", url: "https://www.japan-guide.com/e/e5700.html" },
+        fukuoka: { label: "Japan-Guide Fukuoka", url: "https://www.japan-guide.com/e/e2161.html" },
+        kitakyushu: { label: "Japan-Guide Kitakyushu", url: "https://www.japan-guide.com/e/e4875.html" },
+        busan: { label: "Helena Bradbury Busan", url: "https://www.helenabradbury.com/blog-1/best-things-to-do-in-busan-south-korea" },
+        beppu: { label: "Japan-Guide Beppu", url: "https://www.japan-guide.com/e/e4700.html" },
+        yufuin: { label: "Japan-Guide Yufuin", url: "https://www.japan-guide.com/e/e4750.html" },
+        takachiho: { label: "Japan-Guide Takachiho Gorge", url: "https://www.japan-guide.com/e/e8052.html" },
+        miyazaki: { label: "Japan-Guide Miyazaki", url: "https://www.japan-guide.com/e/e8000.html" },
+        kagoshima: { label: "Japan-Guide Kagoshima", url: "https://www.japan-guide.com/e/e4600.html" }
+      }
+    };
+
+    function sourceGuideForLocation(locationId) {
+      return sourceLibrary.guides[locationId] || sourceLibrary.japanGuideHome;
+    }
+
+    const curatedReferenceCards = {
+      "tokyo": [
+            {
+                  "title": "Tsukiji Outer Market",
+                  "summary": "Market for fresh seafood and produce.",
+                  "url": "https://www.japan-guide.com/e/e3021.html",
+                  "image": "https://www.japan-guide.com/thumb/XYZeXYZe3021_375.jpg",
+                  "source": "https://www.japan-guide.com/e/e2164.html",
+                  "sourceLabel": "Japan-Guide Tokyo"
+            },
+            {
+                  "title": "Akihabara",
+                  "summary": "District for electronic and otaku goods.",
+                  "url": "https://www.japan-guide.com/e/e3003.html",
+                  "image": "https://www.japan-guide.com/thumb/XYZeXYZe3003_375.jpg",
+                  "source": "https://www.japan-guide.com/e/e2164.html",
+                  "sourceLabel": "Japan-Guide Tokyo"
+            },
+            {
+                  "title": "Koishikawa Korakuen",
+                  "summary": "Landscape garden next to Tokyo Dome.",
+                  "url": "https://www.japan-guide.com/e/e3034_003.html",
+                  "image": "https://www.japan-guide.com/thumb/XYZeXYZe3034_003_375.jpg",
+                  "source": "https://www.japan-guide.com/e/e2164.html",
+                  "sourceLabel": "Japan-Guide Tokyo"
+            },
+            {
+                  "title": "Hama Rikyu",
+                  "summary": "Landscape garden next to Shiodome.",
+                  "url": "https://www.japan-guide.com/e/e3025.html",
+                  "image": "https://www.japan-guide.com/thumb/XYZeXYZe3025_375.jpg",
+                  "source": "https://www.japan-guide.com/e/e2164.html",
+                  "sourceLabel": "Japan-Guide Tokyo"
+            },
+            {
+                  "title": "Imperial East Gardens",
+                  "summary": "Park on the former grounds of Edo Castle.",
+                  "url": "https://www.japan-guide.com/e/e3018.html",
+                  "image": "https://www.japan-guide.com/thumb/XYZeXYZe3018_375.jpg",
+                  "source": "https://www.japan-guide.com/e/e2164.html",
+                  "sourceLabel": "Japan-Guide Tokyo"
+            },
+            {
+                  "title": "Imperial Palace",
+                  "summary": "Main residence of the Imperial Family.",
+                  "url": "https://www.japan-guide.com/e/e3017.html",
+                  "image": "https://www.japan-guide.com/thumb/XYZeXYZe3017_375.jpg",
+                  "source": "https://www.japan-guide.com/e/e2164.html",
+                  "sourceLabel": "Japan-Guide Tokyo"
+            },
+            {
+                  "title": "Ginza",
+                  "summary": "Japan's premier shopping district.",
+                  "url": "https://www.japan-guide.com/e/e3005.html",
+                  "image": "https://www.japan-guide.com/thumb/XYZeXYZe3005_375.jpg",
+                  "source": "https://www.japan-guide.com/e/e2164.html",
+                  "sourceLabel": "Japan-Guide Tokyo"
+            },
+            {
+                  "title": "Nihonbashi",
+                  "summary": "Commercial district in central Tokyo.",
+                  "url": "https://www.japan-guide.com/e/e3033.html",
+                  "image": "https://www.japan-guide.com/thumb/XYZeXYZe3033_375.jpg",
+                  "source": "https://www.japan-guide.com/e/e2164.html",
+                  "sourceLabel": "Japan-Guide Tokyo"
+            }
+      ],
+      "hiroshima": [
+            {
+                  "title": "Peace Park",
+                  "summary": "Remembering the drop of the atomic bomb.",
+                  "url": "https://www.japan-guide.com/e/e3400.html",
+                  "image": "https://www.japan-guide.com/thumb/XYZeXYZe3400_375.jpg",
+                  "source": "https://www.japan-guide.com/e/e2160.html",
+                  "sourceLabel": "Japan-Guide Hiroshima"
+            },
+            {
+                  "title": "Mazda Museum",
+                  "summary": "Museum and factory tours of the car maker.",
+                  "url": "https://www.japan-guide.com/e/e3405.html",
+                  "image": "https://www.japan-guide.com/thumb/XYZeXYZe3405_375.jpg",
+                  "source": "https://www.japan-guide.com/e/e2160.html",
+                  "sourceLabel": "Japan-Guide Hiroshima"
+            },
+            {
+                  "title": "Shukkeien Garden",
+                  "summary": "Japanese landscape garden.",
+                  "url": "https://www.japan-guide.com/e/e3403.html",
+                  "image": "https://www.japan-guide.com/thumb/XYZeXYZe3403_375.jpg",
+                  "source": "https://www.japan-guide.com/e/e2160.html",
+                  "sourceLabel": "Japan-Guide Hiroshima"
+            },
+            {
+                  "title": "Hiroshima Downtown",
+                  "summary": "About Hiroshima's downtown area.",
+                  "url": "https://www.japan-guide.com/e/e3406.html",
+                  "image": "https://www.japan-guide.com/thumb/XYZeXYZe3406_375.jpg",
+                  "source": "https://www.japan-guide.com/e/e2160.html",
+                  "sourceLabel": "Japan-Guide Hiroshima"
+            },
+            {
+                  "title": "Hiroshima Castle",
+                  "summary": "Reconstruction of the former castle.",
+                  "url": "https://www.japan-guide.com/e/e3402.html",
+                  "image": "https://www.japan-guide.com/thumb/XYZeXYZe3402_375.jpg",
+                  "source": "https://www.japan-guide.com/e/e2160.html",
+                  "sourceLabel": "Japan-Guide Hiroshima"
+            },
+            {
+                  "title": "Miyajima",
+                  "summary": "Island known for its shrine and large torii gate.",
+                  "url": "https://www.japan-guide.com/e/e3401.html",
+                  "image": "https://www.japan-guide.com/thumb/XYZeXYZe3401_375.jpg",
+                  "source": "https://www.japan-guide.com/e/e2160.html",
+                  "sourceLabel": "Japan-Guide Hiroshima"
+            },
+            {
+                  "title": "Onomichi",
+                  "summary": "Port town with many slopes and temples.",
+                  "url": "https://www.japan-guide.com/e/e3475.html",
+                  "image": "https://www.japan-guide.com/thumb/XYZeXYZe3475_375.jpg",
+                  "source": "https://www.japan-guide.com/e/e2160.html",
+                  "sourceLabel": "Japan-Guide Hiroshima"
+            },
+            {
+                  "title": "Iwakuni",
+                  "summary": "Site of the picturesque Kintai-kyo Bridge.",
+                  "url": "https://www.japan-guide.com/e/e6175.html",
+                  "image": "https://www.japan-guide.com/thumb/XYZeXYZe6175_375.jpg",
+                  "source": "https://www.japan-guide.com/e/e2160.html",
+                  "sourceLabel": "Japan-Guide Hiroshima"
+            }
+      ],
+      "okayama": [
+            {
+                  "title": "Korakuen Garden",
+                  "summary": "Outstanding Japanese style landscape garden.",
+                  "url": "https://www.japan-guide.com/e/e5701.html",
+                  "image": "https://www.japan-guide.com/thumb/XYZeXYZe5701_375.jpg",
+                  "source": "https://www.japan-guide.com/e/e5700.html",
+                  "sourceLabel": "Japan-Guide Okayama"
+            },
+            {
+                  "title": "Kibi Plain",
+                  "summary": "Charming plain with attractive cycling route.",
+                  "url": "https://www.japan-guide.com/e/e5705.html",
+                  "image": "https://www.japan-guide.com/thumb/XYZeXYZe5705_375.jpg",
+                  "source": "https://www.japan-guide.com/e/e5700.html",
+                  "sourceLabel": "Japan-Guide Okayama"
+            },
+            {
+                  "title": "Okayama Castle",
+                  "summary": "Reconstruction of the former castle.",
+                  "url": "https://www.japan-guide.com/e/e5702.html",
+                  "image": "https://www.japan-guide.com/thumb/XYZeXYZe5702_375.jpg",
+                  "source": "https://www.japan-guide.com/e/e5700.html",
+                  "sourceLabel": "Japan-Guide Okayama"
+            },
+            {
+                  "title": "Naoshima",
+                  "summary": "Small island with a lot of modern art.",
+                  "url": "https://www.japan-guide.com/e/e5475.html",
+                  "image": "https://www.japan-guide.com/thumb/XYZeXYZe5475_375.jpg",
+                  "source": "https://www.japan-guide.com/e/e5700.html",
+                  "sourceLabel": "Japan-Guide Okayama"
+            },
+            {
+                  "title": "Inujima Island",
+                  "summary": "Small island turned into a modern art site.",
+                  "url": "https://www.japan-guide.com/e/e5725.html",
+                  "image": "https://www.japan-guide.com/thumb/XYZeXYZe5725_375.jpg",
+                  "source": "https://www.japan-guide.com/e/e5700.html",
+                  "sourceLabel": "Japan-Guide Okayama"
+            },
+            {
+                  "title": "Bitchu-Takahashi",
+                  "summary": "Pretty town with original mountaintop castle.",
+                  "url": "https://www.japan-guide.com/e/e5775.html",
+                  "image": "https://www.japan-guide.com/thumb/XYZeXYZe5775_375.jpg",
+                  "source": "https://www.japan-guide.com/e/e5700.html",
+                  "sourceLabel": "Japan-Guide Okayama"
+            },
+            {
+                  "title": "Onomichi",
+                  "summary": "Port town with many slopes and temples.",
+                  "url": "https://www.japan-guide.com/e/e3475.html",
+                  "image": "https://www.japan-guide.com/thumb/XYZeXYZe3475_375.jpg",
+                  "source": "https://www.japan-guide.com/e/e5700.html",
+                  "sourceLabel": "Japan-Guide Okayama"
+            },
+            {
+                  "title": "Kurashiki",
+                  "summary": "City with a picturesque, historic canal area.",
+                  "url": "https://www.japan-guide.com/e/e5750.html",
+                  "image": "https://www.japan-guide.com/thumb/XYZeXYZe5750_375.jpg",
+                  "source": "https://www.japan-guide.com/e/e5700.html",
+                  "sourceLabel": "Japan-Guide Okayama"
+            }
+      ],
+      "fukuoka": [
+            {
+                  "title": "Gion Yamakasa",
+                  "summary": "Spectacular festival with a race of festival floats.",
+                  "url": "https://www.japan-guide.com/e/e4808.html",
+                  "image": "https://www.japan-guide.com/thumb/XYZeXYZe4808_375.jpg",
+                  "source": "https://www.japan-guide.com/e/e2161.html",
+                  "sourceLabel": "Japan-Guide Fukuoka"
+            },
+            {
+                  "title": "Yatai(Food Stalls)",
+                  "summary": "Offering a special atmosphere every night.",
+                  "url": "https://www.japan-guide.com/e/e4803.html",
+                  "image": "https://www.japan-guide.com/thumb/XYZeXYZe4803_375.jpg",
+                  "source": "https://www.japan-guide.com/e/e2161.html",
+                  "sourceLabel": "Japan-Guide Fukuoka"
+            },
+            {
+                  "title": "Uminonakamichi Park",
+                  "summary": "Huge park on a peninsula across the bay.",
+                  "url": "https://www.japan-guide.com/e/e4810.html",
+                  "image": "https://www.japan-guide.com/thumb/XYZeXYZe4810_375.jpg",
+                  "source": "https://www.japan-guide.com/e/e2161.html",
+                  "sourceLabel": "Japan-Guide Fukuoka"
+            },
+            {
+                  "title": "Ohori Park",
+                  "summary": "Public city park with a central pond.",
+                  "url": "https://www.japan-guide.com/e/e4805.html",
+                  "image": "https://www.japan-guide.com/thumb/XYZeXYZe4805_375.jpg",
+                  "source": "https://www.japan-guide.com/e/e2161.html",
+                  "sourceLabel": "Japan-Guide Fukuoka"
+            },
+            {
+                  "title": "Shofukuji Temple",
+                  "summary": "Japan's first Zen temple.",
+                  "url": "https://www.japan-guide.com/e/e4804.html",
+                  "image": "https://www.japan-guide.com/thumb/XYZeXYZe4804_375.jpg",
+                  "source": "https://www.japan-guide.com/e/e2161.html",
+                  "sourceLabel": "Japan-Guide Fukuoka"
+            },
+            {
+                  "title": "Momochi Seaside Park",
+                  "summary": "Futuristic district along the waterfront.",
+                  "url": "https://www.japan-guide.com/e/e4801.html",
+                  "image": "https://www.japan-guide.com/thumb/XYZeXYZe4801_375.jpg",
+                  "source": "https://www.japan-guide.com/e/e2161.html",
+                  "sourceLabel": "Japan-Guide Fukuoka"
+            },
+            {
+                  "title": "Canal City",
+                  "summary": "Large shopping and entertainment complex.",
+                  "url": "https://www.japan-guide.com/e/e4800.html",
+                  "image": "https://www.japan-guide.com/thumb/XYZeXYZe4800_375.jpg",
+                  "source": "https://www.japan-guide.com/e/e2161.html",
+                  "sourceLabel": "Japan-Guide Fukuoka"
+            },
+            {
+                  "title": "Fukuoka Castle Ruins",
+                  "summary": "Ruins of the city's former castle.",
+                  "url": "https://www.japan-guide.com/e/e4806.html",
+                  "image": "https://www.japan-guide.com/thumb/XYZeXYZe4806_375.jpg",
+                  "source": "https://www.japan-guide.com/e/e2161.html",
+                  "sourceLabel": "Japan-Guide Fukuoka"
+            }
+      ],
+      "kitakyushu": [
+            {
+                  "title": "Kawachi Wisteria Garden",
+                  "summary": "Garden with spectacular flower tunnels.",
+                  "url": "https://www.japan-guide.com/e/e4881.html",
+                  "image": "https://www.japan-guide.com/thumb/XYZeXYZe4881_375.jpg",
+                  "source": "https://www.japan-guide.com/e/e4875.html",
+                  "sourceLabel": "Japan-Guide Kitakyushu"
+            },
+            {
+                  "title": "TOTO Museum",
+                  "summary": "Displaying the evolution of toilets.",
+                  "url": "https://www.japan-guide.com/e/e4883.html",
+                  "image": "https://www.japan-guide.com/thumb/XYZeXYZe4883_375.jpg",
+                  "source": "https://www.japan-guide.com/e/e4875.html",
+                  "sourceLabel": "Japan-Guide Kitakyushu"
+            },
+            {
+                  "title": "Moji Port",
+                  "summary": "Waterfront area with a nostalgic atmosphere.",
+                  "url": "https://www.japan-guide.com/e/e4878.html",
+                  "image": "https://www.japan-guide.com/thumb/XYZeXYZe4878_375.jpg",
+                  "source": "https://www.japan-guide.com/e/e4875.html",
+                  "sourceLabel": "Japan-Guide Kitakyushu"
+            },
+            {
+                  "title": "Kokura Castle",
+                  "summary": "Reconstructed castle not far from the station.",
+                  "url": "https://www.japan-guide.com/e/e4879.html",
+                  "image": "https://www.japan-guide.com/thumb/XYZeXYZe4879_375.jpg",
+                  "source": "https://www.japan-guide.com/e/e4875.html",
+                  "sourceLabel": "Japan-Guide Kitakyushu"
+            },
+            {
+                  "title": "Yawata Steel Works",
+                  "summary": "The city's most significant industrial heritage.",
+                  "url": "https://www.japan-guide.com/e/e4882.html",
+                  "image": "https://www.japan-guide.com/thumb/XYZeXYZe4882_375.jpg",
+                  "source": "https://www.japan-guide.com/e/e4875.html",
+                  "sourceLabel": "Japan-Guide Kitakyushu"
+            },
+            {
+                  "title": "Kitakyushu Manga Museum",
+                  "summary": "Museum about manga next to Kokura Station.",
+                  "url": "https://www.japan-guide.com/e/e4880.html",
+                  "image": "https://www.japan-guide.com/thumb/XYZeXYZe4880_375.jpg",
+                  "source": "https://www.japan-guide.com/e/e4875.html",
+                  "sourceLabel": "Japan-Guide Kitakyushu"
+            },
+            {
+                  "title": "Tanga Market",
+                  "summary": "Local market street in the city center.",
+                  "url": "https://www.japan-guide.com/e/e4884.html",
+                  "image": "https://www.japan-guide.com/thumb/XYZeXYZe4884_375.jpg",
+                  "source": "https://www.japan-guide.com/e/e4875.html",
+                  "sourceLabel": "Japan-Guide Kitakyushu"
+            }
+      ],
+      "beppu": [
+            {
+                  "title": "Beppu Hot Springs",
+                  "summary": "About Beppu's various hot spring baths.",
+                  "url": "https://www.japan-guide.com/e/e4701.html",
+                  "image": "https://www.japan-guide.com/thumb/XYZeXYZe4701_375.jpg",
+                  "source": "https://www.japan-guide.com/e/e4700.html",
+                  "sourceLabel": "Japan-Guide Beppu"
+            },
+            {
+                  "title": "Steam Cooking",
+                  "summary": "Cooking food with natural hot spring steam.",
+                  "url": "https://www.japan-guide.com/e/e4707.html",
+                  "image": "https://www.japan-guide.com/thumb/XYZeXYZe4707_375.jpg",
+                  "source": "https://www.japan-guide.com/e/e4700.html",
+                  "sourceLabel": "Japan-Guide Beppu"
+            },
+            {
+                  "title": "Mount Tsurumi",
+                  "summary": "Mountain with ropeway overlooking the city.",
+                  "url": "https://www.japan-guide.com/e/e4706.html",
+                  "image": "https://www.japan-guide.com/thumb/XYZeXYZe4706_375.jpg",
+                  "source": "https://www.japan-guide.com/e/e4700.html",
+                  "sourceLabel": "Japan-Guide Beppu"
+            },
+            {
+                  "title": "Jigoku(Hells)",
+                  "summary": "Hot springs for viewing rather than bathing.",
+                  "url": "https://www.japan-guide.com/e/e4702.html",
+                  "image": "https://www.japan-guide.com/thumb/XYZeXYZe4702_375.jpg",
+                  "source": "https://www.japan-guide.com/e/e4700.html",
+                  "sourceLabel": "Japan-Guide Beppu"
+            },
+            {
+                  "title": "Umitamago Aquarium",
+                  "summary": "Attractive aquarium next to the monkey park.",
+                  "url": "https://www.japan-guide.com/e/e4704.html",
+                  "image": "https://www.japan-guide.com/thumb/XYZeXYZe4704_375.jpg",
+                  "source": "https://www.japan-guide.com/e/e4700.html",
+                  "sourceLabel": "Japan-Guide Beppu"
+            },
+            {
+                  "title": "Takasaki Monkey Park",
+                  "summary": "Mountain inhabited by monkeys.",
+                  "url": "https://www.japan-guide.com/e/e4703.html",
+                  "image": "https://www.japan-guide.com/thumb/XYZeXYZe4703_375.jpg",
+                  "source": "https://www.japan-guide.com/e/e4700.html",
+                  "sourceLabel": "Japan-Guide Beppu"
+            },
+            {
+                  "title": "Oita Art Museum",
+                  "summary": "Modern art museum in nearby Oita City.",
+                  "url": "https://www.japan-guide.com/e/e4708.html",
+                  "image": "https://www.japan-guide.com/thumb/XYZeXYZe4708_375.jpg",
+                  "source": "https://www.japan-guide.com/e/e4700.html",
+                  "sourceLabel": "Japan-Guide Beppu"
+            },
+            {
+                  "title": "Yufuin",
+                  "summary": "Rural yet trendy hot spring town near Beppu.",
+                  "url": "https://www.japan-guide.com/e/e4750.html",
+                  "image": "https://www.japan-guide.com/thumb/XYZeXYZe4750_375.jpg",
+                  "source": "https://www.japan-guide.com/e/e4700.html",
+                  "sourceLabel": "Japan-Guide Beppu"
+            }
+      ],
+      "miyazaki": [
+            {
+                  "title": "Aoshima Island",
+                  "summary": "Charming island outside Miyazaki City.",
+                  "url": "https://www.japan-guide.com/e/e8005.html",
+                  "image": "https://www.japan-guide.com/thumb/XYZeXYZe8005_375.jpg",
+                  "source": "https://www.japan-guide.com/e/e8000.html",
+                  "sourceLabel": "Japan-Guide Miyazaki"
+            },
+            {
+                  "title": "Science Museum",
+                  "summary": "With an emphasis on physics and space.",
+                  "url": "https://www.japan-guide.com/e/e8007.html",
+                  "image": "https://www.japan-guide.com/thumb/XYZeXYZe8007_375.jpg",
+                  "source": "https://www.japan-guide.com/e/e8000.html",
+                  "sourceLabel": "Japan-Guide Miyazaki"
+            },
+            {
+                  "title": "Heiwadai Park",
+                  "summary": "Public park with a unique peace tower.",
+                  "url": "https://www.japan-guide.com/e/e8002.html",
+                  "image": "https://www.japan-guide.com/thumb/XYZeXYZe8002_375.jpg",
+                  "source": "https://www.japan-guide.com/e/e8000.html",
+                  "sourceLabel": "Japan-Guide Miyazaki"
+            },
+            {
+                  "title": "Miyazaki Shrine",
+                  "summary": "Shrine with large park in the city center.",
+                  "url": "https://www.japan-guide.com/e/e8004.html",
+                  "image": "https://www.japan-guide.com/thumb/XYZeXYZe8004_375.jpg",
+                  "source": "https://www.japan-guide.com/e/e8000.html",
+                  "sourceLabel": "Japan-Guide Miyazaki"
+            },
+            {
+                  "title": "Prefectural Museum",
+                  "summary": "Museum about local history and nature.",
+                  "url": "https://www.japan-guide.com/e/e8006.html",
+                  "image": "https://www.japan-guide.com/thumb/XYZeXYZe8006_375.jpg",
+                  "source": "https://www.japan-guide.com/e/e8000.html",
+                  "sourceLabel": "Japan-Guide Miyazaki"
+            },
+            {
+                  "title": "Seagaia Resort",
+                  "summary": "Leisure resort outside the city center.",
+                  "url": "https://www.japan-guide.com/e/e8003.html",
+                  "image": "https://www.japan-guide.com/thumb/XYZeXYZe8003_375.jpg",
+                  "source": "https://www.japan-guide.com/e/e8000.html",
+                  "sourceLabel": "Japan-Guide Miyazaki"
+            },
+            {
+                  "title": "Takachiho",
+                  "summary": "Mountain town steeped in mythology.",
+                  "url": "https://www.japan-guide.com/e/e8050.html",
+                  "image": "https://www.japan-guide.com/thumb/XYZeXYZe8050_375.jpg",
+                  "source": "https://www.japan-guide.com/e/e8000.html",
+                  "sourceLabel": "Japan-Guide Miyazaki"
+            },
+            {
+                  "title": "Kirishima",
+                  "summary": "National Park with volcanic mountain range.",
+                  "url": "https://www.japan-guide.com/e/e4625.html",
+                  "image": "https://www.japan-guide.com/thumb/XYZeXYZe4625_375.jpg",
+                  "source": "https://www.japan-guide.com/e/e8000.html",
+                  "sourceLabel": "Japan-Guide Miyazaki"
+            }
+      ],
+      "kagoshima": [
+            {
+                  "title": "Sakurajima",
+                  "summary": "Active volcano in the bay off Kagoshima.",
+                  "url": "https://www.japan-guide.com/e/e4601.html",
+                  "image": "https://www.japan-guide.com/thumb/XYZeXYZe4601_375.jpg",
+                  "source": "https://www.japan-guide.com/e/e4600.html",
+                  "sourceLabel": "Japan-Guide Kagoshima"
+            },
+            {
+                  "title": "Senganen Garden",
+                  "summary": "Japanese-style landscape garden.",
+                  "url": "https://www.japan-guide.com/e/e4602.html",
+                  "image": "https://www.japan-guide.com/thumb/XYZeXYZe4602_375.jpg",
+                  "source": "https://www.japan-guide.com/e/e4600.html",
+                  "sourceLabel": "Japan-Guide Kagoshima"
+            },
+            {
+                  "title": "Kagoshima Aquarium",
+                  "summary": "Interesting aquarium in the Kagoshima Port area.",
+                  "url": "https://www.japan-guide.com/e/e4608.html",
+                  "image": "https://www.japan-guide.com/thumb/XYZeXYZe4608_375.jpg",
+                  "source": "https://www.japan-guide.com/e/e4600.html",
+                  "sourceLabel": "Japan-Guide Kagoshima"
+            },
+            {
+                  "title": "Shiroyama Park",
+                  "summary": "Mountain top park with a viewpoint over the city.",
+                  "url": "https://www.japan-guide.com/e/e4607.html",
+                  "image": "https://www.japan-guide.com/thumb/XYZeXYZe4607_375.jpg",
+                  "source": "https://www.japan-guide.com/e/e4600.html",
+                  "sourceLabel": "Japan-Guide Kagoshima"
+            },
+            {
+                  "title": "Reimeikan Museum",
+                  "summary": "Large museum about local history and culture.",
+                  "url": "https://www.japan-guide.com/e/e4606.html",
+                  "image": "https://www.japan-guide.com/thumb/XYZeXYZe4606_375.jpg",
+                  "source": "https://www.japan-guide.com/e/e4600.html",
+                  "sourceLabel": "Japan-Guide Kagoshima"
+            },
+            {
+                  "title": "Yakushima",
+                  "summary": "Subtropical island with ancient cedar forest.",
+                  "url": "https://www.japan-guide.com/e/e4650.html",
+                  "image": "https://www.japan-guide.com/thumb/XYZeXYZe4650_375.jpg",
+                  "source": "https://www.japan-guide.com/e/e4600.html",
+                  "sourceLabel": "Japan-Guide Kagoshima"
+            },
+            {
+                  "title": "Kirishima",
+                  "summary": "National Park with volcanic mountain range.",
+                  "url": "https://www.japan-guide.com/e/e4625.html",
+                  "image": "https://www.japan-guide.com/thumb/XYZeXYZe4625_375.jpg",
+                  "source": "https://www.japan-guide.com/e/e4600.html",
+                  "sourceLabel": "Japan-Guide Kagoshima"
+            },
+            {
+                  "title": "Satsuma Peninsula",
+                  "summary": "Rural peninsula with hot springs in southern Kyushu.",
+                  "url": "https://www.japan-guide.com/e/e4675.html",
+                  "image": "https://www.japan-guide.com/thumb/XYZeXYZe4675_375.jpg",
+                  "source": "https://www.japan-guide.com/e/e4600.html",
+                  "sourceLabel": "Japan-Guide Kagoshima"
+            }
+      ],
+      "yufuin": [
+            {
+                  "title": "Tsuka no Ma",
+                  "summary": "Tsuka no Ma (formerly known as Shoya no Yakata) is located on a hillside in the northern part of Yufuin where large steam clouds from hot spring sources can be seen rising into the air. The ryokan has large, gender separated outdoor baths with blueish-looking water, untypical for Yufuin. The location on the hillside allows for some views onto the town below.",
+                  "url": "https://www.japan-guide.com/e/e4750.html#shoyanoyakata",
+                  "image": "https://www.japan-guide.com/g2/4750_04.jpg",
+                  "source": "https://www.japan-guide.com/e/e4750.html",
+                  "sourceLabel": "Japan-Guide Yufuin"
+            },
+            {
+                  "title": "Baien",
+                  "summary": "Baien is located slightly above the town to the south, and has large, attractive outdoor baths (rotemburo) for visitors. On clear days, the twin peaks of Mount Yufu are visible from the baths. The facilities are gender separated.",
+                  "url": "https://www.japan-guide.com/e/e4750.html#baien",
+                  "image": "https://www.japan-guide.com/g2/4750_05.jpg",
+                  "source": "https://www.japan-guide.com/e/e4750.html",
+                  "sourceLabel": "Japan-Guide Yufuin"
+            },
+            {
+                  "title": "Musoen",
+                  "summary": "The views of Mount Yufu from Musoen's outdoor baths are considered among Yufuin's best. The ryokan is located slightly above the town to the south and has large, attractive baths that are gender separated. The ryokan grounds are quite attractive, as well.",
+                  "url": "https://www.japan-guide.com/e/e4750.html#musoen",
+                  "image": "https://www.japan-guide.com/g2/4750_06.jpg",
+                  "source": "https://www.japan-guide.com/e/e4750.html",
+                  "sourceLabel": "Japan-Guide Yufuin"
+            },
+            {
+                  "title": "Sansuikan",
+                  "summary": "Located just a short walk from Yufuin Station, Sansuikan offers some of the most easily accessible baths to tourists without private means of transportation. The large ryokan 's gender separated bathing facilities feature multiple outdoor and indoor pools, a scented bath and a sauna.",
+                  "url": "https://www.japan-guide.com/e/e4750.html#sansuikan",
+                  "image": "https://www.japan-guide.com/g2/4750_08.jpg",
+                  "source": "https://www.japan-guide.com/e/e4750.html",
+                  "sourceLabel": "Japan-Guide Yufuin"
+            },
+            {
+                  "title": "Shitanyu Public Bath",
+                  "summary": "The Shitanyu is a very simple, old-fashioned public bath house at the shore of Lake Kinrinko with two small pools. It is gender mixed without dedicated changing rooms and very limited facilities. The bath house opens towards the back, giving bathers a view onto some greenery.",
+                  "url": "https://www.japan-guide.com/e/e4750.html#shitanyu",
+                  "image": "https://www.japan-guide.com/g2/4750_09.jpg",
+                  "source": "https://www.japan-guide.com/e/e4750.html",
+                  "sourceLabel": "Japan-Guide Yufuin"
+            }
+      ],
+      "takachiho": [
+            {
+                  "title": "Takachiho Gorge Overview",
+                  "summary": "Takachiho Gorge is a narrow chasm cut through the rock by the Gokase River. The nearly sheer cliffs lining the gorge are made of volcanic basalt columns that resemble dragon scales.",
+                  "url": "https://www.japan-guide.com/e/e8052.html",
+                  "image": "https://www.japan-guide.com/g20/8052_02.jpg",
+                  "source": "https://www.japan-guide.com/e/e8052.html",
+                  "sourceLabel": "Japan-Guide Takachiho Gorge"
+            },
+            {
+                  "title": "Minainotaki Waterfall Viewpoint",
+                  "summary": "Partway along the gorge is the 17 meter high Minainotaki waterfall cascading down to the river below, and it is truly impressive to see the waterfall against a backdrop of dense green foliage and the surrounding grey cliffs.",
+                  "url": "https://www.japan-guide.com/e/e8052.html",
+                  "image": "https://www.japan-guide.com/g20/8052_02.jpg",
+                  "source": "https://www.japan-guide.com/e/e8052.html",
+                  "sourceLabel": "Japan-Guide Takachiho Gorge"
+            },
+            {
+                  "title": "Rowboat Experience",
+                  "summary": "There are two perspectives from which to enjoy the gorge. The first is from below which is done by rowing down the river. Rental boats are available at the south end of the gorge, and the water is calm and easy to navigate. This highly recommended route offers a close up view of the cliffs and waterfall.",
+                  "url": "https://www.japan-guide.com/e/e8052.html",
+                  "image": "https://www.japan-guide.com/g20/8052_02.jpg",
+                  "source": "https://www.japan-guide.com/e/e8052.html",
+                  "sourceLabel": "Japan-Guide Takachiho Gorge"
+            },
+            {
+                  "title": "Clifftop Walking Trail",
+                  "summary": "The second perspective, from above, is done by walking the paved path that runs along the edge of the gorge. There are beautiful views all along the way and at some points on the trail you can look practically straight down to the river below. The trail continues for about one kilometer, eventually leading to the Takachiho Shrine .",
+                  "url": "https://www.japan-guide.com/e/e8052.html",
+                  "image": "https://www.japan-guide.com/g20/8052_03.jpg",
+                  "source": "https://www.japan-guide.com/e/e8052.html",
+                  "sourceLabel": "Japan-Guide Takachiho Gorge"
+            },
+            {
+                  "title": "South End Facilities & Evening Illumination",
+                  "summary": "There are a few other things to see and do around the southern end of the gorge including a freshwater aquarium, a stocked fishing pond and a few restaurants and souvenir shops. The gorge is illuminated in the evenings from mid May to November until 22:00.",
+                  "url": "https://www.japan-guide.com/e/e8052.html",
+                  "image": "https://www.japan-guide.com/g20/8052_03.jpg",
+                  "source": "https://www.japan-guide.com/e/e8052.html",
+                  "sourceLabel": "Japan-Guide Takachiho Gorge"
+            }
+      ],
+      "busan": [
+            {
+                  "title": "Gamcheon Culture Village",
+                  "summary": "Free to visit, the Gamcheon Culture Village is probably one of the most famous Busan attractions and definitely one of the most popular places to see in Busan - for a good reason!",
+                  "url": "https://www.helenabradbury.com/blog-1/best-things-to-do-in-busan-south-korea",
+                  "image": "https://images.squarespace-cdn.com/content/v1/5bbcf00a9b8fe874ed2f03d0/5642bfd5-75fb-4e04-b060-6acac5624fe6/Gamcheon-culture-village.jpg",
+                  "source": "https://www.helenabradbury.com/blog-1/best-things-to-do-in-busan-south-korea",
+                  "sourceLabel": "Helena Bradbury Busan"
+            },
+            {
+                  "title": "Huinnyeoul Culture Village",
+                  "summary": "This felt like a cute Greek village with narrow alleyways, whitewashed buildings and blue rooftops!",
+                  "url": "https://www.helenabradbury.com/blog-1/best-things-to-do-in-busan-south-korea",
+                  "image": "https://images.squarespace-cdn.com/content/v1/5bbcf00a9b8fe874ed2f03d0/bb532b17-d557-4ff2-945f-30c222dddc13/huinnyeoul-culture-village.jpg",
+                  "source": "https://www.helenabradbury.com/blog-1/best-things-to-do-in-busan-south-korea",
+                  "sourceLabel": "Helena Bradbury Busan"
+            },
+            {
+                  "title": "Haeundae Blueline Park",
+                  "summary": "Probably my favourite of all the top Busan attractions we saw on our trip!",
+                  "url": "https://www.helenabradbury.com/blog-1/best-things-to-do-in-busan-south-korea",
+                  "image": "https://images.squarespace-cdn.com/content/v1/5bbcf00a9b8fe874ed2f03d0/0980083c-347d-472d-916b-b0e470e2c363/haeundae-blueline-park.jpg",
+                  "source": "https://www.helenabradbury.com/blog-1/best-things-to-do-in-busan-south-korea",
+                  "sourceLabel": "Helena Bradbury Busan"
+            },
+            {
+                  "title": "Cheongsapo Daritdol Observatory",
+                  "summary": "Another great free attraction is this glass observatory deck which is 72.5m long and allows you to walk out onto the pier for amazing views of the village, city and surrounding coastline.",
+                  "url": "https://www.helenabradbury.com/blog-1/best-things-to-do-in-busan-south-korea",
+                  "image": "https://images.squarespace-cdn.com/content/v1/5bbcf00a9b8fe874ed2f03d0/beb578b7-47b2-4900-b6b3-c5b3c44cd3ff/busan-Cheongsapo-Daritdol-observatory.jpg",
+                  "source": "https://www.helenabradbury.com/blog-1/best-things-to-do-in-busan-south-korea",
+                  "sourceLabel": "Helena Bradbury Busan"
+            },
+            {
+                  "title": "Haedong Yonggungsa Temple",
+                  "summary": "Haedong Younggungsa Temple is one of the best places to visit in Busan, South Korea. This temple is unique for its coastal setting right by the sea and beach.",
+                  "url": "https://www.helenabradbury.com/blog-1/best-things-to-do-in-busan-south-korea",
+                  "image": "https://images.squarespace-cdn.com/content/v1/5bbcf00a9b8fe874ed2f03d0/76db435b-35fb-4147-afde-d073ea7f607a/Haedong-Yonggungsa-Temple-busan.jpg",
+                  "source": "https://www.helenabradbury.com/blog-1/best-things-to-do-in-busan-south-korea",
+                  "sourceLabel": "Helena Bradbury Busan"
+            },
+            {
+                  "title": "Taejongdae Resort Park",
+                  "summary": "Another amazing coastal park area with dramatic cliff views over the sea. Do not skip the observation deck for expansive rocky coastline views. You can also see Yeongdo Lighthouse, a temple, and a train ride in the park.",
+                  "url": "https://www.helenabradbury.com/blog-1/best-things-to-do-in-busan-south-korea",
+                  "image": "https://images.squarespace-cdn.com/content/v1/5bbcf00a9b8fe874ed2f03d0/f0e4ecff-a127-4a43-8172-77c3b18662a4/Huinnyeoul-culture-village.jpg",
+                  "source": "https://www.helenabradbury.com/blog-1/best-things-to-do-in-busan-south-korea",
+                  "sourceLabel": "Helena Bradbury Busan"
+            },
+            {
+                  "title": "Ride the Songdo Marine Cable Car",
+                  "summary": "Get unparalleled views of the city from the Songdo Cable Car. A round trip costs just 22,000 won and the cars have glass bottoms so you literally get 360 degree views!",
+                  "url": "https://www.helenabradbury.com/blog-1/best-things-to-do-in-busan-south-korea",
+                  "image": "https://images.squarespace-cdn.com/content/v1/5bbcf00a9b8fe874ed2f03d0/33ac6f8a-e1d3-46fa-9063-f93fe9f60cac/songdo-bay.jpg",
+                  "source": "https://www.helenabradbury.com/blog-1/best-things-to-do-in-busan-south-korea",
+                  "sourceLabel": "Helena Bradbury Busan"
+            },
+            {
+                  "title": "Visit Dakbatgol Mural Village",
+                  "summary": "Some of the best places to visit in Busan, South Korea are these villages because they all have such unique character and are usually colourful and artistic.",
+                  "url": "https://www.helenabradbury.com/blog-1/best-things-to-do-in-busan-south-korea",
+                  "image": "https://images.squarespace-cdn.com/content/v1/5bbcf00a9b8fe874ed2f03d0/821f89cc-0992-4c6a-a900-b79f49d5f2b2/Dakbatgol-mural-village.jpg",
+                  "source": "https://www.helenabradbury.com/blog-1/best-things-to-do-in-busan-south-korea",
+                  "sourceLabel": "Helena Bradbury Busan"
+            }
+      ]
+};
+
+    const costBandLabels = {
+      budget: "Budget $",
+      value: "Value $$",
+      uppermid: "Upper-mid $$$",
+      premium: "Premium $$$$"
+    };
+
+    const locationBandProfiles = {
+      tokyo: ["value", "uppermid", "premium"],
+      hiroshima: ["budget", "value", "uppermid"],
+      okayama: ["budget", "value", "uppermid"],
+      fukuoka: ["value", "uppermid", "premium"],
+      kitakyushu: ["budget", "value", "uppermid"],
+      busan: ["budget", "value", "uppermid"],
+      beppu: ["value", "uppermid", "premium"],
+      yufuin: ["uppermid", "premium", "premium"],
+      takachiho: ["budget", "value", "uppermid"],
+      miyazaki: ["value", "uppermid", "premium"],
+      kagoshima: ["value", "uppermid", "premium"]
+    };
+
+    const accommodationResearch = Object.fromEntries(
+      Object.values(locations).map(loc => {
+        const cards = curatedReferenceCards[loc.id] || [];
+        const profile = locationBandProfiles[loc.id] || ["value", "uppermid", "premium"];
+        const references = cards.slice(0, 3).map((card, idx) => {
+          const bandKey = profile[Math.min(idx, profile.length - 1)] || "value";
+          return {
+            name: card.title,
+            costBand: costBandLabels[bandKey] || costBandLabels.value,
+            note: card.summary,
+            url: card.url,
+            source: card.source,
+            sourceLabel: card.sourceLabel,
+            image: card.image
+          };
+        });
+        return [loc.id, { references }];
+      })
+    );
+
+    const costReferences = {
+      transport: {
+        tokyo_hiroshima: {
+          label: "Tokyo → Hiroshima (Shinkansen)",
+          adultJPY: 19740,
+          source: sourceLibrary.guides.hiroshima.url
+        },
+        hiroshima_fukuoka: {
+          label: "Hiroshima → Fukuoka (Shinkansen)",
+          adultJPY: 8500,
+          source: sourceLibrary.guides.fukuoka.url
+        },
+        tokyo_fukuoka: {
+          label: "Tokyo → Fukuoka (Flight avg-low)",
+          adultJPY: 15433,
+          source: sourceLibrary.guides.fukuoka.url
+        },
+        kagoshima_tokyo: {
+          label: "Kagoshima → Tokyo (Flight midpoint)",
+          adultJPY: 21500,
+          source: sourceLibrary.guides.kagoshima.url
+        },
+        fukuoka_busan: {
+          label: "Fukuoka → Busan (Camellia, 1st class Japanese room)",
+          adultJPY: 15000,
+          fixedFamilyJPY: 53250,
+          source: `${sourceLibrary.camellia.fare.url} | ${sourceLibrary.camellia.pamphlet.url}`,
+          notes: "Family of 4 model (2 adults + child 8yo + child 4yo): one-way first-class room fare plus Hakata-side listed taxes/fees."
+        },
+        busan_fukuoka: {
+          label: "Busan → Fukuoka overnight (Camellia, 1st class Japanese room)",
+          adultJPY: 15000,
+          fixedFamilyJPY: 50700,
+          source: `${sourceLibrary.camellia.fare.url} | ${sourceLibrary.camellia.pamphlet.url}`,
+          notes: "Family of 4 model: one-way first-class room fare plus Busan-side listed fees (KRW fees converted at approx. JPY 0.11/KRW)."
+        }
+      },
+      car: {
+        dailyJPY: 10340,
+        oneWayFeeJPY: 20000,
+        source: sourceLibrary.japanGuideHome.url
+      },
+      seasonal: {
+        holidayWindowStart: "12-20",
+        holidayWindowEnd: "01-05",
+        hotelMultiplier: 1.25,
+        transportMultiplier: 1.12
+      },
+      hotelBands: {
+        budget: 11000,
+        value: 18000,
+        uppermid: 28000,
+        premium: 45000
+      },
+      familyProfile: {
+        adults: 2,
+        child8: 1,
+        child4: 1,
+        child8TransportFactor: 0.75,
+        child4TransportFactor: 0.5
+      }
+    };
+
+    const state = {
+      selectedPackageId: "option1",
+      selectedStopId: null,
+      selectedLegIndex: null,
+      selectionOrigin: "overview",
+      showRoutes: true,
+      showSideVisits: true,
+      showDrivingOnly: false,
+      includeBusan: true,
+      showAllStaySegments: false
+    };
+
+    const map = L.map("map", { zoomControl: true }).setView([33.3, 132.0], 6);
+    L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png", {
+      maxZoom: 18,
+      attribution: "&copy; OpenStreetMap contributors"
+    }).addTo(map);
+
+    const mapLayers = {
+      markers: L.layerGroup().addTo(map),
+      lines: L.layerGroup().addTo(map),
+      side: L.layerGroup().addTo(map)
+    };
+    let quickNavObserver = null;
+    let quickNavEntries = [];
+
+    function formatDate(date) {
+      return date.toLocaleDateString("en-AU", {
+        day: "2-digit",
+        month: "short",
+        year: "numeric"
+      });
+    }
+
+    function formatTimelineDate(date) {
+      return date
+        .toLocaleDateString("en-AU", {
+          weekday: "long",
+          day: "2-digit",
+          month: "short",
+          year: "2-digit"
+        })
+        .replace(/,\s*/, " ");
+    }
+
+    function daysBetween(start, end) {
+      return Math.round((end - start) / (1000 * 60 * 60 * 24));
+    }
+
+    function getSelectedPackage() {
+      return editablePackages[state.selectedPackageId];
+    }
+
+    function calcStopSchedule(pkg) {
+      const schedule = [];
+      let cursor = new Date(tripStart);
+      pkg.stops.forEach(stop => {
+        const start = new Date(cursor);
+        const end = new Date(cursor);
+        end.setDate(end.getDate() + stop.nights);
+        schedule.push({ ...stop, startDate: start, endDate: end });
+        cursor = new Date(end);
+      });
+      return schedule;
+    }
+
+    function summarizePackage(pkg) {
+      const legs = deriveLegs(pkg);
+      const nights = pkg.stops.reduce((sum, stop) => sum + stop.nights, 0);
+      const bases = new Set(pkg.stops.map(s => s.locationId)).size;
+      const drivingLegs = legs.filter(leg => leg.detail.primaryMode === "Car").length;
+      const driveHours = legs.filter(leg => leg.detail.primaryMode === "Car").reduce((sum, leg) => sum + leg.detail.hours, 0);
+      const paceRaw = Math.max(28, Math.min(98, 96 - (bases - 5) * 6 - (legs.length - 6) * 4 - Math.round(driveHours * 1.8)));
+      return {
+        nights,
+        bases,
+        legs: legs.length,
+        drivingLegs,
+        driveHours,
+        pace: paceRaw
+      };
+    }
+
+    function paceLabel(score) {
+      if (score >= 80) return "Relaxed";
+      if (score >= 65) return "Balanced";
+      if (score >= 48) return "Active";
+      return "Busy";
+    }
+
+    function modeBadge(mode, cls) {
+      return `<span class="mode ${cls}">${mode}</span>`;
+    }
+
+    function fallbackLegDetail(fromLoc, toLoc) {
+      const sameCity = fromLoc.id === toLoc.id;
+      if (sameCity) {
+        return {
+          primaryMode: "Walk",
+          modeClass: "walk",
+          time: "Local transfer",
+          hours: 0.3,
+          alternatives: [],
+          carNote: "Same-base shift; no major transfer needed."
+        };
+      }
+
+      return {
+        primaryMode: "Car",
+        modeClass: "car",
+        time: "~2-4h (estimate)",
+        hours: 2.8,
+        alternatives: [
+          { mode: "Train", time: "Varies by route", className: "train" },
+          { mode: "Flight", time: "Only for long-distance legs", className: "flight" }
+        ],
+        carNote: "Confirm exact route and toll strategy before locking."
+      };
+    }
+
+    function deriveLegs(pkg) {
+      const byStopPair = new Map((pkg.legs || []).map(leg => [`${leg.from}->${leg.to}`, leg.legKey]));
+      const legs = [];
+
+      for (let i = 0; i < pkg.stops.length - 1; i += 1) {
+        const fromStop = pkg.stops[i];
+        const toStop = pkg.stops[i + 1];
+        const pairKey = `${fromStop.id}->${toStop.id}`;
+        let legKey = byStopPair.get(pairKey);
+
+        if (!legKey) {
+          const locationKey = `${fromStop.locationId}_${toStop.locationId}`;
+          if (legCatalog[locationKey]) {
+            legKey = locationKey;
+          }
+        }
+
+        const detail = legKey && legCatalog[legKey]
+          ? legCatalog[legKey]
+          : fallbackLegDetail(locations[fromStop.locationId], locations[toStop.locationId]);
+
+        legs.push({
+          idx: i,
+          fromStop,
+          toStop,
+          legKey: legKey || "custom",
+          detail
+        });
+      }
+
+      return legs;
+    }
+
+    function punchyWhyLine(stop) {
+      const loc = locations[stop.locationId];
+      if (!loc || !loc.whyStay) return "Strong stop that improves route quality and family rhythm.";
+      const firstSentence = loc.whyStay.split(/[.!?]/)[0].trim();
+      if (!firstSentence) return "Strong stop that improves route quality and family rhythm.";
+      return firstSentence.length > 95 ? `${firstSentence.slice(0, 92)}...` : firstSentence;
+    }
+
+    function getVisibleLegs(legs) {
+      return state.showDrivingOnly ? legs.filter(leg => leg.detail.primaryMode === "Car") : legs;
+    }
+
+    function focusTransportLeg(legIdx) {
+      const details = document.getElementById("transportDetails");
+      details.setAttribute("open", "open");
+      const list = document.getElementById("legList");
+      const target = list.querySelector(`[data-leg-idx="${legIdx}"]`);
+      if (!target) return;
+      list.scrollTo({
+        top: Math.max(0, target.offsetTop - 10),
+        behavior: "smooth"
+      });
+    }
+
+    function focusTransportForStop(stopId, shouldScrollList = true) {
+      const legs = deriveLegs(getSelectedPackage());
+      const visibleLegs = getVisibleLegs(legs);
+      const target = visibleLegs.find(leg => leg.fromStop.id === stopId || leg.toStop.id === stopId);
+      state.selectedStopId = stopId;
+      state.selectedLegIndex = target ? target.idx : null;
+      state.selectionOrigin = "map";
+      highlightSelection();
+      if (shouldScrollList && target) {
+        requestAnimationFrame(() => focusTransportLeg(target.idx));
+      }
+    }
+
+    function syncMapFilterButtons() {
+      const routesBtn = document.getElementById("toggleRoutes");
+      const sideBtn = document.getElementById("toggleSideVisits");
+      const drivingBtn = document.getElementById("toggleDrivingOnly");
+      if (!routesBtn || !sideBtn || !drivingBtn) return;
+
+      routesBtn.classList.toggle("active", state.showRoutes);
+      routesBtn.setAttribute("aria-pressed", String(state.showRoutes));
+      routesBtn.textContent = state.showRoutes ? "Show routes" : "Hide routes";
+
+      sideBtn.classList.toggle("active", state.showSideVisits);
+      sideBtn.setAttribute("aria-pressed", String(state.showSideVisits));
+      sideBtn.textContent = state.showSideVisits ? "Show side visits" : "Hide side visits";
+
+      drivingBtn.classList.toggle("active", state.showDrivingOnly);
+      drivingBtn.setAttribute("aria-pressed", String(state.showDrivingOnly));
+    }
+
+    function stopIndexForSelection(schedule, legs) {
+      if (state.selectedStopId) {
+        return schedule.findIndex(stop => stop.id === state.selectedStopId);
+      }
+      if (state.selectedLegIndex !== null) {
+        const selectedLeg = legs.find(leg => leg.idx === state.selectedLegIndex);
+        if (!selectedLeg) return -1;
+        return schedule.findIndex(stop => stop.id === selectedLeg.toStop.id);
+      }
+      return -1;
+    }
+
+    function updateMapPlaybackControls(schedule, legs) {
+      const backBtn = document.getElementById("mapStepBack");
+      const nextBtn = document.getElementById("mapStepNext");
+      const resetBtn = document.getElementById("mapStartOver");
+      const status = document.getElementById("mapStepStatus");
+      if (!backBtn || !nextBtn || !resetBtn || !status) return;
+
+      if (!schedule.length) {
+        backBtn.disabled = true;
+        nextBtn.disabled = true;
+        resetBtn.disabled = true;
+        status.textContent = "No bases in this option";
+        return;
+      }
+
+      const currentIndex = stopIndexForSelection(schedule, legs);
+      backBtn.disabled = currentIndex <= 0;
+      nextBtn.disabled = currentIndex < 0 || currentIndex >= schedule.length - 1;
+      resetBtn.disabled = false;
+
+      if (currentIndex >= 0) {
+        status.textContent = `${currentIndex + 1}/${schedule.length} • ${schedule[currentIndex].label}`;
+      } else {
+        status.textContent = `Ready to step through ${schedule.length} bases`;
+      }
+    }
+
+    function stepMapSelection(direction) {
+      const pkg = getSelectedPackage();
+      const schedule = calcStopSchedule(pkg);
+      const legs = deriveLegs(pkg);
+      if (!schedule.length) return;
+
+      const currentIndex = stopIndexForSelection(schedule, legs);
+      const fallbackIndex = direction > 0 ? 0 : schedule.length - 1;
+      const startIndex = currentIndex >= 0 ? currentIndex : fallbackIndex;
+      const nextIndex = Math.max(0, Math.min(schedule.length - 1, startIndex + direction));
+      const targetStop = schedule[nextIndex];
+      if (!targetStop) return;
+
+      state.selectedStopId = targetStop.id;
+      state.selectedLegIndex = null;
+      state.selectionOrigin = "overview";
+      highlightSelection();
+    }
+
+    function startMapJourneyOver() {
+      const pkg = getSelectedPackage();
+      state.selectedStopId = pkg.stops[0]?.id || null;
+      state.selectedLegIndex = null;
+      state.selectionOrigin = "overview";
+      state.showRoutes = true;
+      state.showSideVisits = true;
+      state.showDrivingOnly = false;
+      syncMapFilterButtons();
+      highlightSelection();
+    }
+
+    function setHeaderCollapsed(collapsed) {
+      const header = document.querySelector(".site-header");
+      const toggle = document.getElementById("headerToggle");
+      if (!header || !toggle) return;
+      header.classList.toggle("is-collapsed", collapsed);
+      document.body.classList.toggle("header-collapsed", collapsed);
+      document.body.classList.toggle("header-expanded", !collapsed);
+      toggle.setAttribute("aria-expanded", String(!collapsed));
+      toggle.textContent = collapsed ? "Expand header" : "Collapse header";
+    }
+
+    function shortStayArea(text) {
+      if (!text) return "-";
+      const slashSplit = text.split("/")[0].trim();
+      const orSplit = slashSplit.split(" or ")[0].trim();
+      const commaSplit = orSplit.split(",")[0].trim();
+      return commaSplit || text;
+    }
+
+    function renderMapSelectionContext(pkg, schedule, legs) {
+      const panel = document.getElementById("mapSelectionContext");
+      if (!panel) return;
+      const byId = Object.fromEntries(schedule.map(stop => [stop.id, stop]));
+      const selectedLeg = legs.find(leg => leg.idx === state.selectedLegIndex);
+
+      if (selectedLeg) {
+        const fromStop = byId[selectedLeg.fromStop.id];
+        const toStop = byId[selectedLeg.toStop.id];
+        const fromLoc = locations[fromStop.locationId];
+        const toLoc = locations[toStop.locationId];
+        panel.innerHTML = `
+          <div class="map-context-head">Selected Point</div>
+          <div class="map-context-grid">
+            <div class="map-context-col">
+              <strong>From ${fromLoc.name}</strong><br/>
+              Idea: ${fromLoc.things?.[0] || "-"}<br/>
+              Stay area: ${shortStayArea(fromLoc.stayArea)}<br/>
+              Planned nights: ${fromStop.nights}
+            </div>
+            <div class="map-context-col">
+              <strong>To ${toLoc.name}</strong><br/>
+              Idea: ${toLoc.things?.[0] || "-"}<br/>
+              Stay area: ${shortStayArea(toLoc.stayArea)}<br/>
+              Planned nights: ${toStop.nights}
+            </div>
+          </div>
+        `;
+        return;
+      }
+
+      if (state.selectedStopId) {
+        const stop = byId[state.selectedStopId];
+        if (stop) {
+          const loc = locations[stop.locationId];
+          const goodFor = stop.isTransitNight
+            ? (stop.note || "Overnight ferry segment before Kyushu driving starts.")
+            : (loc.things?.[0] || loc.whyStay || "-");
+          panel.innerHTML = `
+            <div class="map-context-head">Selected Point</div>
+            <div class="map-context-col">
+              <strong>${loc.name}</strong><br/>
+              Good for: ${goodFor}<br/>
+              Stay area: ${shortStayArea(loc.stayArea)}<br/>
+              Planned nights: ${stop.nights}<br/>
+              Dates: ${formatDate(stop.startDate)} to ${formatDate(stop.endDate)}
+            </div>
+          `;
+          return;
+        }
+      }
+
+      panel.innerHTML = `
+        <div class="map-context-head">Selected Point</div>
+        <div class="small">Tap a map pin or commute leg to see quick context for that point in the route.</div>
+      `;
+    }
+
+    function findStop(schedule, stopId) {
+      return schedule.find(s => s.id === stopId);
+    }
+
+    function stopMoment(stop, timing) {
+      if (!stop) return null;
+      return timing === "start" ? stop.startDate : stop.endDate;
+    }
+
+    function carWindowDays(pkg, schedule) {
+      const pickup = findStop(schedule, pkg.carPlan.pickupStopId);
+      const ret = findStop(schedule, pkg.carPlan.returnStopId);
+      const pickupAt = stopMoment(pickup, pkg.carPlan.pickupTiming || "start");
+      const returnAt = stopMoment(ret, pkg.carPlan.returnTiming || "end");
+      if (!pickupAt || !returnAt) {
+        return { days: 0, text: "Not set" };
+      }
+      const days = Math.max(0, daysBetween(pickupAt, returnAt));
+      return { days, text: `${days} day(s)` };
+    }
+
+    function roundJPY(value) {
+      return Math.round(value / 1000) * 1000;
+    }
+
+    function formatJPY(value) {
+      return `¥${Math.round(value).toLocaleString("en-US")}`;
+    }
+
+    function isPeakSeasonRange() {
+      const start = new Date(tripStart);
+      const end = new Date(tripEnd);
+      const y = start.getFullYear();
+      const peakStart = new Date(`${y}-12-20T00:00:00`);
+      const peakEnd = new Date(`${y + 1}-01-05T23:59:59`);
+      return start <= peakEnd && end >= peakStart;
+    }
+
+    function bandsForLocation(locationId) {
+      const research = accommodationResearch[locationId];
+      if (!research) return ["value"];
+      const all = [...(research.references || [])];
+      const bands = all.map(entry => {
+        const text = (entry.costBand || "").toLowerCase();
+        if (text.includes("budget")) return "budget";
+        if (text.includes("value")) return "value";
+        if (text.includes("upper-mid")) return "uppermid";
+        if (text.includes("premium")) return "premium";
+        return null;
+      }).filter(Boolean);
+      return [...new Set(bands)].length ? [...new Set(bands)] : ["value"];
+    }
+
+    function accommodationRateForLocation(locationId, level) {
+      const bands = bandsForLocation(locationId);
+      const rates = costReferences.hotelBands;
+      const ordered = ["budget", "value", "uppermid", "premium"];
+      const values = bands
+        .map(b => rates[b])
+        .filter(Boolean)
+        .sort((a, b) => a - b);
+      if (!values.length) return rates.value;
+      if (level === "low") return values[0];
+      if (level === "high") return values[values.length - 1];
+      const weights = { budget: 0.25, value: 0.4, uppermid: 0.22, premium: 0.13 };
+      let sum = 0;
+      let denom = 0;
+      ordered.forEach(b => {
+        if (!bands.includes(b)) return;
+        sum += rates[b] * weights[b];
+        denom += weights[b];
+      });
+      return denom > 0 ? sum / denom : values[Math.floor(values.length / 2)];
+    }
+
+    function transportFamilyEquivalent() {
+      const family = costReferences.familyProfile;
+      return (family.adults) + (family.child8 * family.child8TransportFactor) + (family.child4 * family.child4TransportFactor);
+    }
+
+    function fallbackAdultTransportFare(leg) {
+      const mode = leg.detail.primaryMode;
+      const hours = Number(leg.detail.hours || 0);
+      if (mode === "Plane") return 17000 + Math.round(hours * 1200);
+      if (mode === "Bullet Train") return 8500 + Math.round(hours * 2500);
+      if (mode === "Ferry") return 9500;
+      if (mode === "Train") return 6000 + Math.round(hours * 1600);
+      if (mode === "Walk") return 0;
+      return 7000 + Math.round(hours * 1700);
+    }
+
+    function estimateOptionCost(pkg) {
+      const schedule = calcStopSchedule(pkg);
+      const legs = deriveLegs(pkg);
+      const carWindow = carWindowDays(pkg, schedule);
+      const peakSeason = isPeakSeasonRange();
+      const seasonHotel = peakSeason ? costReferences.seasonal.hotelMultiplier : 1;
+      const seasonTransport = peakSeason ? costReferences.seasonal.transportMultiplier : 1;
+      const familyEq = transportFamilyEquivalent();
+      const rows = [];
+
+      let transportLow = 0;
+      let transportMid = 0;
+      let transportHigh = 0;
+      let hotelLow = 0;
+      let hotelMid = 0;
+      let hotelHigh = 0;
+
+      legs.forEach(leg => {
+        if (leg.detail.primaryMode === "Car") {
+          rows.push({
+            type: "Transport",
+            segment: `${leg.fromStop.label} → ${leg.toStop.label}`,
+            basis: `Car leg (${leg.detail.time})`,
+            quantity: "1 leg",
+            unitJPY: 0,
+            lowJPY: 0,
+            midJPY: 0,
+            highJPY: 0,
+            source: "Covered by car-hire row",
+            notes: "Fuel/tolls excluded by request."
+          });
+          return;
+        }
+
+        const ref = costReferences.transport[leg.legKey];
+        const adultFare = ref ? ref.adultJPY : fallbackAdultTransportFare(leg);
+        const baseFamilyRaw = ref && Number(ref.fixedFamilyJPY)
+          ? Number(ref.fixedFamilyJPY)
+          : adultFare * familyEq;
+        const baseFamily = baseFamilyRaw * seasonTransport;
+        const low = baseFamily * 0.9;
+        const mid = baseFamily;
+        const high = baseFamily * 1.15;
+        transportLow += low;
+        transportMid += mid;
+        transportHigh += high;
+
+        rows.push({
+          type: "Transport",
+          segment: `${leg.fromStop.label} → ${leg.toStop.label}`,
+          basis: `${leg.detail.primaryMode} (${leg.detail.time})`,
+          quantity: ref && Number(ref.fixedFamilyJPY) ? "1 family package (4 pax)" : `${familyEq.toFixed(2)} adult-equiv`,
+          unitJPY: ref && Number(ref.fixedFamilyJPY) ? Number(ref.fixedFamilyJPY) : adultFare,
+          lowJPY: low,
+          midJPY: mid,
+          highJPY: high,
+          source: ref ? ref.source : "Model fallback from mode + travel time",
+          notes: ref ? (ref.notes || "Guide-anchored transport reference applied.") : "No direct source for this leg; modeled estimate."
+        });
+      });
+
+      if (carWindow.days > 0) {
+        const carBase = ((costReferences.car.dailyJPY * carWindow.days) + costReferences.car.oneWayFeeJPY) * seasonTransport;
+        const carLow = carBase * 0.9;
+        const carMid = carBase;
+        const carHigh = carBase * 1.15;
+        transportLow += carLow;
+        transportMid += carMid;
+        transportHigh += carHigh;
+
+        rows.push({
+          type: "Car hire",
+          segment: `${carWindow.days} day window`,
+          basis: "Kyushu rental + one-way drop fee",
+          quantity: `${carWindow.days} days`,
+          unitJPY: costReferences.car.dailyJPY,
+          lowJPY: carLow,
+          midJPY: carMid,
+          highJPY: carHigh,
+          source: costReferences.car.source,
+          notes: `Daily ${formatJPY(costReferences.car.dailyJPY)} + one-way ${formatJPY(costReferences.car.oneWayFeeJPY)} (fuel excluded).`
+        });
+      }
+
+      schedule.forEach(stop => {
+        const lowRate = accommodationRateForLocation(stop.locationId, "low") * seasonHotel;
+        const midRate = accommodationRateForLocation(stop.locationId, "mid") * seasonHotel;
+        const highRate = accommodationRateForLocation(stop.locationId, "high") * seasonHotel;
+        const low = lowRate * stop.nights;
+        const mid = midRate * stop.nights;
+        const high = highRate * stop.nights;
+        hotelLow += low;
+        hotelMid += mid;
+        hotelHigh += high;
+
+        const research = accommodationResearch[stop.locationId];
+        const source = research
+          ? [...new Set((research.references || []).map(entry => entry.source).filter(Boolean))].slice(0, 2).join(" | ")
+          : sourceLibrary.japanGuideHome.url;
+
+        rows.push({
+          type: "Hotel",
+          segment: stop.label,
+          basis: `${locations[stop.locationId].name} stay`,
+          quantity: `${stop.nights} night(s)`,
+          unitJPY: midRate,
+          lowJPY: low,
+          midJPY: mid,
+          highJPY: high,
+          source,
+          notes: "Per-night banded model anchored to curated destination source articles."
+        });
+      });
+
+      const lowTotal = roundJPY(transportLow + hotelLow);
+      const midTotal = roundJPY(transportMid + hotelMid);
+      const highTotal = roundJPY(transportHigh + hotelHigh);
+
+      return {
+        lowTotal,
+        midTotal,
+        highTotal,
+        hotelLow: roundJPY(hotelLow),
+        hotelMid: roundJPY(hotelMid),
+        hotelHigh: roundJPY(hotelHigh),
+        transportLow: roundJPY(transportLow),
+        transportMid: roundJPY(transportMid),
+        transportHigh: roundJPY(transportHigh),
+        assumptions: {
+          peakSeason,
+          seasonHotel,
+          seasonTransport,
+          familyEq,
+          familyProfile: costReferences.familyProfile
+        },
+        rows
+      };
+    }
+
+    function setSelectedStop(stopId, shouldScroll) {
+      state.selectedStopId = stopId;
+      state.selectedLegIndex = null;
+      state.selectionOrigin = "overview";
+      highlightSelection();
+      if (shouldScroll && stopId) {
+        const target = document.getElementById(`timeline-${stopId}`) || document.getElementById(`base-editor-${stopId}`);
+        if (target) {
+          target.scrollIntoView({ behavior: "smooth", block: "center" });
+        }
+        focusVibeClusterForStop(stopId);
+      }
+    }
+
+    function normalizeBusanToggle() {
+      const toggle = document.getElementById("busanToggle");
+      state.includeBusan = toggle.checked;
+      if (toggle.checked && state.selectedPackageId === "option2") {
+        state.selectedPackageId = "option1";
+      }
+      if (!toggle.checked && state.selectedPackageId === "option1") {
+        state.selectedPackageId = "option2";
+      }
+    }
+
+    function renderPackageCards() {
+      const parent = document.getElementById("packageCards");
+      parent.innerHTML = "";
+      Object.values(editablePackages).forEach(pkg => {
+        const s = summarizePackage(pkg);
+        const card = document.createElement("article");
+        card.className = `option-card ${pkg.id === state.selectedPackageId ? "active" : ""}`;
+        card.setAttribute("role", "button");
+        card.setAttribute("tabindex", "0");
+        card.setAttribute("aria-pressed", String(pkg.id === state.selectedPackageId));
+        card.setAttribute("data-pkg", pkg.id);
+        card.innerHTML = `
+          <div class="kicker">${pkg.id.toUpperCase()}</div>
+          <h3>${pkg.title}</h3>
+          <p class="small" style="margin-bottom: 8px;">${pkg.summary}</p>
+          <p class="small" style="margin-bottom: 8px;"><strong>${s.nights} nights • ${s.bases} bases • ${s.legs} transitions</strong></p>
+          <p class="small muted">${pkg.id === state.selectedPackageId ? "Selected option" : "Click to select this option"}</p>
+          <p class="small" style="margin-top: 10px;">${pkg.excludedNote}</p>
+        `;
+        const selectCard = () => {
+          state.selectedPackageId = pkg.id;
+          if (state.selectedPackageId === "option1") {
+            document.getElementById("busanToggle").checked = true;
+            state.includeBusan = true;
+          } else if (state.selectedPackageId === "option2") {
+            document.getElementById("busanToggle").checked = false;
+            state.includeBusan = false;
+          }
+
+          const selectedPkg = getSelectedPackage();
+          state.selectedStopId = selectedPkg.stops[0]?.id || null;
+          state.selectedLegIndex = null;
+          state.selectionOrigin = "overview";
+          renderAll();
+        };
+        card.addEventListener("click", selectCard);
+        card.addEventListener("keydown", (event) => {
+          if (event.key !== "Enter" && event.key !== " ") return;
+          event.preventDefault();
+          selectCard();
+        });
+        parent.appendChild(card);
+      });
+    }
+
+    function sourceCellHtml(source, notes) {
+      const parts = String(source || "").split("|").map(part => part.trim()).filter(Boolean);
+      const linked = parts.map(part => {
+        if (!part.startsWith("http")) return `<span>${part}</span>`;
+        let label = part;
+        try {
+          label = new URL(part).hostname.replace(/^www\./, "");
+        } catch (err) {
+          label = part;
+        }
+        return `<a href="${part}" target="_blank" rel="noopener noreferrer">${label}</a>`;
+      }).join(" • ");
+      return `${linked || "-"}${notes ? `<div class="small">${notes}</div>` : ""}`;
+    }
+
+    function renderCostings() {
+      const pkg = getSelectedPackage();
+      const estimate = estimateOptionCost(pkg);
+      const body = document.getElementById("costingTableBody");
+      if (!body) return;
+      body.innerHTML = "";
+
+      estimate.rows.forEach(row => {
+        const tr = document.createElement("tr");
+        tr.innerHTML = `
+          <td>${row.type}</td>
+          <td>${row.segment}</td>
+          <td>${row.basis}</td>
+          <td>${row.quantity}</td>
+          <td>${row.unitJPY ? formatJPY(row.unitJPY) : "-"}</td>
+          <td>${formatJPY(roundJPY(row.lowJPY))}</td>
+          <td>${formatJPY(roundJPY(row.midJPY))}</td>
+          <td>${formatJPY(roundJPY(row.highJPY))}</td>
+          <td>${sourceCellHtml(row.source, row.notes)}</td>
+        `;
+        body.appendChild(tr);
+      });
+
+      document.getElementById("costingOptionTitle").textContent = pkg.title.replace("Option ", "Opt ");
+      document.getElementById("costingLow").textContent = formatJPY(estimate.lowTotal);
+      document.getElementById("costingMid").textContent = formatJPY(estimate.midTotal);
+      document.getElementById("costingHigh").textContent = formatJPY(estimate.highTotal);
+      document.getElementById("costingTotalLow").textContent = formatJPY(estimate.lowTotal);
+      document.getElementById("costingTotalMid").textContent = formatJPY(estimate.midTotal);
+      document.getElementById("costingTotalHigh").textContent = formatJPY(estimate.highTotal);
+
+      const f = estimate.assumptions.familyProfile;
+      const assumptions = [
+        `Family model: ${f.adults} adults + ${f.child8} child (8yo @ ${f.child8TransportFactor}x fare) + ${f.child4} child (4yo @ ${f.child4TransportFactor}x fare).`,
+        "Camellia ferry rows use first-class Japanese-style room family package pricing for 4 passengers (return split across both sailing legs).",
+        `Season smoothing applied for Dec-Jan: hotel x${estimate.assumptions.seasonHotel.toFixed(2)}, transport x${estimate.assumptions.seasonTransport.toFixed(2)}.`,
+        "Flights purchased (SYD-HND return) are excluded. Fuel/food are excluded per request.",
+        "Rows marked as model fallback indicate informed assumptions where direct fare data was not available."
+      ];
+      document.getElementById("costingAssumptions").textContent = assumptions.join(" ");
+    }
+
+    function renderHeaderStats() {
+      const pkg = getSelectedPackage();
+      const summary = summarizePackage(pkg);
+      document.getElementById("headerNights").textContent = summary.nights;
+      document.getElementById("headerBases").textContent = summary.bases;
+      document.getElementById("headerDrivingDays").textContent = summary.drivingLegs;
+    }
+
+    function renderStaySequence() {
+      const pkg = getSelectedPackage();
+      const schedule = calcStopSchedule(pkg);
+      const parent = document.getElementById("staySequence");
+      const toggle = document.getElementById("staySequenceToggle");
+      const isMobile = window.matchMedia("(max-width: 760px)").matches;
+      const collapsedAfter = 4;
+      const needsToggle = isMobile && schedule.length > collapsedAfter;
+      parent.innerHTML = "";
+
+      if (!needsToggle) {
+        state.showAllStaySegments = false;
+      }
+
+      schedule.forEach((stop, idx) => {
+        const loc = locations[stop.locationId];
+        const btn = document.createElement("button");
+        btn.type = "button";
+        btn.className = `stay-segment ${state.selectedStopId === stop.id ? "active" : ""}`;
+        if (needsToggle && !state.showAllStaySegments && idx >= collapsedAfter) {
+          btn.classList.add("is-collapsed");
+        }
+        btn.setAttribute("data-stop-id", stop.id);
+        btn.innerHTML = `
+          <strong>${stop.label}</strong>
+          <div class="nights">${stop.nights} night(s) • ${formatDate(stop.startDate)} to ${formatDate(stop.endDate)}</div>
+          <div class="small" style="margin-top: 5px;">${loc.region}</div>
+        `;
+        btn.addEventListener("click", () => setSelectedStop(stop.id, true));
+        parent.appendChild(btn);
+      });
+
+      if (needsToggle) {
+        toggle.style.display = "inline-flex";
+        toggle.textContent = state.showAllStaySegments ? "Show less" : "Show more";
+        toggle.onclick = () => {
+          state.showAllStaySegments = !state.showAllStaySegments;
+          renderStaySequence();
+        };
+      } else {
+        toggle.style.display = "none";
+        toggle.onclick = null;
+      }
+    }
+
+    function renderTransportAndSummary() {
+      const pkg = getSelectedPackage();
+      const schedule = calcStopSchedule(pkg);
+      const legs = deriveLegs(pkg);
+      const car = carWindowDays(pkg, schedule);
+      const visibleLegs = getVisibleLegs(legs);
+      const totalHours = visibleLegs.reduce((sum, leg) => sum + (leg.detail.hours || 0), 0);
+      const drivingCount = visibleLegs.filter(leg => leg.detail.primaryMode === "Car").length;
+
+      document.getElementById("transportLegCount").textContent = visibleLegs.length;
+      document.getElementById("transportDrivingCount").textContent = drivingCount;
+      document.getElementById("transportHours").textContent = `${totalHours.toFixed(1)}h`;
+      document.getElementById("transportCarWindow").textContent = car.text;
+      renderMapSelectionContext(pkg, schedule, legs);
+      updateMapPlaybackControls(schedule, legs);
+
+      const list = document.getElementById("legList");
+      list.innerHTML = "";
+
+      visibleLegs.forEach((leg, idx) => {
+        const item = document.createElement("article");
+        const shouldHighlight = state.selectedStopId && (leg.fromStop.id === state.selectedStopId || leg.toStop.id === state.selectedStopId);
+        const isActive = state.selectedLegIndex === leg.idx;
+        item.className = `route-leg ${shouldHighlight ? "highlight" : ""} ${isActive ? "active" : ""}`;
+        item.setAttribute("data-leg-idx", String(leg.idx));
+        const alternatives = leg.detail.alternatives.length
+          ? leg.detail.alternatives.map(a => `${modeBadge(a.mode, a.className)} ${a.time}`).join(" ")
+          : "No practical alternatives listed.";
+
+        item.innerHTML = `
+          <div><strong>${idx + 1}. ${leg.fromStop.label} → ${leg.toStop.label}</strong></div>
+          <div style="margin-top: 6px;">${modeBadge(leg.detail.primaryMode, leg.detail.modeClass)} ${leg.detail.time}</div>
+          <div class="small" style="margin-top: 4px;"><strong>Why this matters:</strong> ${punchyWhyLine(leg.toStop)}</div>
+          <div class="small" style="margin-top: 6px;"><strong>Alternatives:</strong> ${alternatives}</div>
+          <div class="small" style="margin-top: 4px;"><strong>Notes:</strong> ${leg.detail.carNote}</div>
+        `;
+        item.addEventListener("click", () => {
+          const currentList = document.getElementById("legList");
+          const keepScrollTop = currentList ? currentList.scrollTop : 0;
+          state.selectedLegIndex = leg.idx;
+          state.selectedStopId = null;
+          state.selectionOrigin = "transport";
+          highlightSelection();
+          const refreshedList = document.getElementById("legList");
+          if (refreshedList) {
+            refreshedList.scrollTop = keepScrollTop;
+          }
+        });
+        list.appendChild(item);
+      });
+    }
+
+    function renderMap() {
+      const pkg = getSelectedPackage();
+      const schedule = calcStopSchedule(pkg);
+      const legs = deriveLegs(pkg);
+      const selectedLeg = legs.find(leg => leg.idx === state.selectedLegIndex);
+      const selectedLegStops = selectedLeg
+        ? new Set([selectedLeg.fromStop.id, selectedLeg.toStop.id])
+        : new Set();
+
+      mapLayers.markers.clearLayers();
+      mapLayers.lines.clearLayers();
+      mapLayers.side.clearLayers();
+
+      const bounds = [];
+
+      schedule.forEach((stop, idx) => {
+        const loc = locations[stop.locationId];
+        const isSelected = state.selectedStopId === stop.id || selectedLegStops.has(stop.id);
+        bounds.push([loc.lat, loc.lng]);
+
+        const icon = L.divIcon({
+          className: "",
+          html: `<div class="base-marker ${isSelected ? "selected" : ""}">${idx + 1}</div>`,
+          iconSize: [30, 30],
+          iconAnchor: [15, 15]
+        });
+
+        const marker = L.marker([loc.lat, loc.lng], { icon });
+        const whyThisBase = stop.isTransitNight
+          ? (stop.note || "Overnight ferry segment before Kyushu drive starts.")
+          : loc.whyStay;
+        marker.bindPopup(`
+          <h4>${idx + 1}. ${stop.label}</h4>
+          <div><strong>Dates:</strong> ${formatDate(stop.startDate)} → ${formatDate(stop.endDate)}</div>
+          <div><strong>Nights:</strong> ${stop.nights}</div>
+          <div><strong>Stay area:</strong> ${loc.stayArea}</div>
+          <div style="margin-top: 4px;"><strong>Why this base:</strong> ${whyThisBase}</div>
+        `);
+        marker.on("click", () => {
+          focusTransportForStop(stop.id, true);
+        });
+        marker.addTo(mapLayers.markers);
+
+        if (state.showSideVisits && stop.sideVisits && stop.sideVisits.length) {
+          stop.sideVisits.forEach(visitId => {
+            const visit = locations[visitId];
+            bounds.push([visit.lat, visit.lng]);
+            L.circleMarker([visit.lat, visit.lng], {
+              radius: 6,
+              color: "#869494",
+              weight: 1,
+              fillColor: "#fff",
+              fillOpacity: 1
+            }).bindPopup(`<strong>${visit.name}</strong><br/>Side visit from ${stop.label}`).addTo(mapLayers.side);
+
+            if (state.showRoutes) {
+              L.polyline([[loc.lat, loc.lng], [visit.lat, visit.lng]], {
+                color: "#99a5a5",
+                weight: 2,
+                dashArray: "6 6"
+              }).addTo(mapLayers.side);
+            }
+          });
+        }
+      });
+
+      if (state.showRoutes) {
+        legs.forEach(leg => {
+          if (state.showDrivingOnly && leg.detail.primaryMode !== "Car") return;
+          const fromLoc = locations[leg.fromStop.locationId];
+          const toLoc = locations[leg.toStop.locationId];
+          const isActiveLeg = leg.idx === state.selectedLegIndex;
+          L.polyline([[fromLoc.lat, fromLoc.lng], [toLoc.lat, toLoc.lng]], {
+            color: isActiveLeg ? "#115E59" : "#0F766E",
+            weight: isActiveLeg ? 5 : 3,
+            opacity: isActiveLeg ? 0.95 : 0.82
+          }).addTo(mapLayers.lines);
+        });
+      }
+
+      if (selectedLeg) {
+        const fromLoc = locations[selectedLeg.fromStop.locationId];
+        const toLoc = locations[selectedLeg.toStop.locationId];
+        if (state.selectionOrigin === "map") {
+          map.fitBounds([[fromLoc.lat, fromLoc.lng], [toLoc.lat, toLoc.lng]], { padding: [28, 28] });
+        } else {
+          const midLat = (fromLoc.lat + toLoc.lat) / 2;
+          const midLng = (fromLoc.lng + toLoc.lng) / 2;
+          map.panTo([midLat, midLng], { animate: true, duration: 0.5 });
+        }
+      } else if (state.selectedStopId) {
+        const selectedStop = schedule.find(stop => stop.id === state.selectedStopId);
+        if (selectedStop) {
+          const selectedLoc = locations[selectedStop.locationId];
+          map.panTo([selectedLoc.lat, selectedLoc.lng], { animate: true, duration: 0.5 });
+        } else if (bounds.length > 0) {
+          map.fitBounds(bounds, { padding: [24, 24] });
+        }
+      } else if (bounds.length > 0) {
+        map.fitBounds(bounds, { padding: [24, 24] });
+      }
+    }
+
+    function renderLocationDirectory() {
+      const pkg = getSelectedPackage();
+      const included = new Set();
+      pkg.stops.forEach(stop => {
+        included.add(stop.locationId);
+        if (stop.sideVisits) stop.sideVisits.forEach(id => included.add(id));
+      });
+
+      const parent = document.getElementById("locationCards");
+      parent.innerHTML = "";
+
+      Object.values(locations)
+        .sort((a, b) => {
+          const aIncluded = included.has(a.id) ? 0 : 1;
+          const bIncluded = included.has(b.id) ? 0 : 1;
+          if (aIncluded !== bIncluded) return aIncluded - bIncluded;
+          if (a.priority === b.priority) return a.name.localeCompare(b.name);
+          return a.priority === "Must-do" ? -1 : 1;
+        })
+        .forEach(loc => {
+          const isIncluded = included.has(loc.id);
+          const guide = sourceGuideForLocation(loc.id);
+          const sourceCards = curatedReferenceCards[loc.id] || [];
+          const knownFor = sourceCards.length
+            ? sourceCards.slice(0, 3).map(card => card.title)
+            : loc.things.slice(0, 3);
+          const withKids = sourceCards.length
+            ? sourceCards.slice(0, 3).map(card => {
+              const text = String(card.summary || "").trim();
+              return text.length > 110 ? `${text.slice(0, 107)}...` : text;
+            })
+            : (loc.things.slice(2, 5).length ? loc.things.slice(2, 5) : loc.things.slice(0, 2));
+          const tags = [loc.priority, loc.region, isIncluded ? "In this option" : "Excluded in this option"];
+          const card = document.createElement("article");
+          card.className = `location-card ${isIncluded ? "" : "excluded"}`;
+          card.innerHTML = `
+            <div>
+              <h3>${loc.name}</h3>
+              <div class="location-meta">${loc.region} • Suggested nights: ${suggestNightsForLocation(pkg, loc.id)} • ${loc.priority}</div>
+              <div style="margin-top: 8px;">
+                <span class="inclusion-pill ${isIncluded ? "included" : "excluded"}">${isIncluded ? "Included" : "Excluded"}</span>
+              </div>
+            </div>
+            <div>
+              <strong>Known for</strong>
+              <ul>${knownFor.map(item => `<li>${item}</li>`).join("")}</ul>
+            </div>
+            <div>
+              <strong>With kids (8yo + 4yo)</strong>
+              <ul>${withKids.map(item => `<li>${item}</li>`).join("")}</ul>
+            </div>
+            <div class="chip-row">${tags.map(tag => `<span class="chip">${tag}</span>`).join("")}</div>
+            <div class="resource-row">
+              <a class="resource-link" href="${guide.url}" target="_blank" rel="noopener noreferrer">${guide.label}</a>
+              <a class="resource-link" href="${sourceLibrary.japanGuideHome.url}" target="_blank" rel="noopener noreferrer">${sourceLibrary.japanGuideHome.label}</a>
+            </div>
+          `;
+          parent.appendChild(card);
+        });
+    }
+
+    function suggestNightsForLocation(pkg, locationId) {
+      const allStops = pkg.stops.filter(stop => stop.locationId === locationId && !stop.isTransitNight);
+      if (!allStops.length) return "0";
+      return allStops.reduce((sum, stop) => sum + stop.nights, 0);
+    }
+
+    function escapeHtml(value) {
+      return String(value || "")
+        .replaceAll("&", "&amp;")
+        .replaceAll("<", "&lt;")
+        .replaceAll(">", "&gt;")
+        .replaceAll('"', "&quot;")
+        .replaceAll("'", "&#39;");
+    }
+
+    function sourceClassForRef(source) {
+      if (String(source || "").startsWith("Japan-Guide")) return "japan-guide";
+      if (String(source || "").startsWith("Helena Bradbury")) return "partner-guide";
+      return "";
+    }
+
+    function priorityTagForVibe(loc, isIncluded) {
+      if (!isIncluded) return "Excluded";
+      return loc.priority || "Nice-to-have";
+    }
+
+    function priorityClassForVibe(tag) {
+      if (tag === "Must-do") return "must";
+      if (tag === "Nice-to-have") return "nice";
+      return "excluded";
+    }
+
+    function pushUniqueReference(list, ref) {
+      if (!ref || !ref.url || !ref.caption) return;
+      if (list.some(item => item.url === ref.url && item.caption === ref.caption)) return;
+      list.push(ref);
+    }
+
+    function buildVibeReferences(locationId) {
+      const guide = sourceGuideForLocation(locationId);
+      const refs = [];
+      (curatedReferenceCards[locationId] || []).forEach(card => {
+        pushUniqueReference(refs, {
+          source: card.sourceLabel || guide.label,
+          url: card.url || guide.url,
+          caption: card.title,
+          detail: card.summary,
+          image: card.image,
+          confidence: "high"
+        });
+      });
+      if (!refs.length) {
+        pushUniqueReference(refs, {
+          source: guide.label,
+          url: guide.url,
+          caption: `${locations[locationId]?.name || "Destination"} source guide`,
+          detail: "Primary destination source article.",
+          image: "",
+          confidence: "high"
+        });
+      }
+      return refs.slice(0, 10);
+    }
+
+    function generateVibeDescriptor(locationId) {
+      const cards = curatedReferenceCards[locationId] || [];
+      if (!cards.length) return "Source article reference set";
+      return cards.slice(0, 3).map(card => card.title).join(" / ");
+    }
+
+    function includedLocationOrder(pkg) {
+      const included = new Set();
+      const ordered = [];
+      pkg.stops.forEach(stop => {
+        if (!included.has(stop.locationId)) {
+          included.add(stop.locationId);
+          ordered.push(stop.locationId);
+        }
+        (stop.sideVisits || []).forEach(visitId => {
+          if (!included.has(visitId)) {
+            included.add(visitId);
+            ordered.push(visitId);
+          }
+        });
+      });
+      return { included, ordered };
+    }
+
+    function activeVibeLocationIds(pkg, legs) {
+      const active = new Set();
+      if (state.selectedStopId) {
+        const selected = pkg.stops.find(stop => stop.id === state.selectedStopId);
+        if (selected) {
+          active.add(selected.locationId);
+        }
+      }
+      if (state.selectedLegIndex !== null) {
+        const selectedLeg = legs.find(leg => leg.idx === state.selectedLegIndex);
+        if (selectedLeg) {
+          active.add(selectedLeg.fromStop.locationId);
+          active.add(selectedLeg.toStop.locationId);
+        }
+      }
+      return active;
+    }
+
+    function vibeCoverageLabel(refs) {
+      const confident = refs.filter(ref => ref.confidence !== "low").length;
+      if (confident < 5) {
+        return refs.length < 5 ? "Visual research needed" : "Limited visual coverage";
+      }
+      return "";
+    }
+
+    function updateVibeSelection() {
+      const pkg = getSelectedPackage();
+      const legs = deriveLegs(pkg);
+      const active = activeVibeLocationIds(pkg, legs);
+      document.querySelectorAll(".vibe-cluster").forEach(cluster => {
+        const locationId = cluster.getAttribute("data-location-id");
+        cluster.classList.toggle("active", active.has(locationId));
+      });
+    }
+
+    function focusVibeClusterForStop(stopId) {
+      const pkg = getSelectedPackage();
+      const stop = pkg.stops.find(entry => entry.id === stopId);
+      if (!stop) return;
+      const target = document.querySelector(`.vibe-cluster[data-location-id="${stop.locationId}"]`);
+      if (!target) return;
+      requestAnimationFrame(() => {
+        target.scrollIntoView({ behavior: "smooth", block: "nearest", inline: "nearest" });
+      });
+    }
+
+    function renderVibeBoard() {
+      const pkg = getSelectedPackage();
+      const board = document.getElementById("vibeBoard");
+      const meta = document.getElementById("vibeBoardMeta");
+      if (!board || !meta) return;
+
+      const { included, ordered } = includedLocationOrder(pkg);
+      const excluded = Object.values(locations)
+        .map(loc => loc.id)
+        .filter(locationId => !included.has(locationId))
+        .sort((a, b) => locations[a].name.localeCompare(locations[b].name));
+      const allLocationIds = [...ordered, ...excluded];
+      const active = activeVibeLocationIds(pkg, deriveLegs(pkg));
+
+      let totalReferences = 0;
+      let flaggedLocations = 0;
+
+      board.innerHTML = allLocationIds.map(locationId => {
+        const loc = locations[locationId];
+        const isIncluded = included.has(locationId);
+        const refs = buildVibeReferences(locationId);
+        const coverageLabel = vibeCoverageLabel(refs);
+        const priority = priorityTagForVibe(loc, isIncluded);
+        const priorityClass = priorityClassForVibe(priority);
+        totalReferences += refs.length;
+        if (coverageLabel) flaggedLocations += 1;
+
+        const tilesHtml = refs.map(ref => `
+          <a class="vibe-tile ${sourceClassForRef(ref.source)}" href="${escapeHtml(ref.url)}" target="_blank" rel="noopener noreferrer" aria-label="${escapeHtml(`${loc.name}: ${ref.caption} (${ref.source})`)}">
+            <h4 class="vibe-tile-title">${escapeHtml(ref.caption)}</h4>
+            <p class="vibe-tile-location">${escapeHtml(loc.name)}</p>
+            <div class="vibe-image-wrap">
+              <img
+                class="vibe-tile-image"
+                src="${escapeHtml(ref.image || (refs[0]?.image || ""))}"
+                alt="${escapeHtml(`${loc.name} visual reference`)}"
+                loading="lazy"
+                referrerpolicy="no-referrer"
+              />
+            </div>
+            <p class="vibe-tile-meta">${escapeHtml(ref.detail || ref.caption)}</p>
+          </a>
+        `).join("");
+
+        return `
+          <article class="vibe-cluster ${isIncluded ? "" : "excluded"} ${active.has(locationId) ? "active" : ""}" data-location-id="${escapeHtml(locationId)}">
+            <div class="vibe-cluster-head">
+              <div>
+                <h3>${escapeHtml(loc.name)}</h3>
+                <div class="vibe-meta-line">
+                  <span class="vibe-priority ${priorityClass}">${escapeHtml(priority)}</span>
+                  <span>${escapeHtml(loc.region)}</span>
+                </div>
+                <p class="vibe-descriptor">${escapeHtml(generateVibeDescriptor(locationId))}</p>
+              </div>
+              ${coverageLabel ? `<span class="vibe-coverage warning">${coverageLabel}</span>` : `<span class="vibe-coverage">${refs.length} source cards</span>`}
+            </div>
+            <div class="vibe-reference-strip">${tilesHtml}</div>
+          </article>
+        `;
+      }).join("");
+
+      const statusTail = flaggedLocations
+        ? `${flaggedLocations} location(s) flagged for extra visual research.`
+        : "No visual coverage gaps detected for the current package.";
+      meta.textContent = `${ordered.length} included clusters • ${totalReferences} source-backed cards. ${statusTail}`;
+    }
+
+    function moveStop(pkg, index, direction) {
+      const newIndex = index + direction;
+      if (newIndex < 0 || newIndex >= pkg.stops.length) return;
+      const [moved] = pkg.stops.splice(index, 1);
+      pkg.stops.splice(newIndex, 0, moved);
+    }
+
+    function changeNights(pkg, index, delta) {
+      const stop = pkg.stops[index];
+      const minNights = 1;
+      stop.nights = Math.max(minNights, stop.nights + delta);
+    }
+
+    function renderBaseEditor() {
+      const pkg = getSelectedPackage();
+      const schedule = calcStopSchedule(pkg);
+      const parent = document.getElementById("baseEditorList");
+      parent.innerHTML = "";
+
+      schedule.forEach((stop, idx) => {
+        const loc = locations[stop.locationId];
+        const card = document.createElement("article");
+        card.className = `base-editor ${state.selectedStopId === stop.id ? "active" : ""}`;
+        card.id = `base-editor-${stop.id}`;
+        card.setAttribute("role", "button");
+        card.setAttribute("tabindex", "0");
+        card.setAttribute("aria-pressed", String(state.selectedStopId === stop.id));
+        const transferNote = stop.isTransitNight
+          ? `<div class="small"><strong>Transit night:</strong> ${stop.note || "Overnight ferry segment before Kyushu drive starts."}</div>`
+          : "";
+        card.innerHTML = `
+          <div>
+            <strong>${idx + 1}. ${stop.label}</strong>
+            <p class="small" style="margin-top: 4px;">${loc.stayArea}</p>
+          </div>
+          <div class="editor-controls">
+            <span><strong>Nights:</strong> ${stop.nights}</span>
+            <span class="small">${formatDate(stop.startDate)} to ${formatDate(stop.endDate)}</span>
+          </div>
+          ${transferNote}
+        `;
+        const focusStop = () => setSelectedStop(stop.id, true);
+        card.addEventListener("click", focusStop);
+        card.addEventListener("keydown", (event) => {
+          if (event.key !== "Enter" && event.key !== " ") return;
+          event.preventDefault();
+          focusStop();
+        });
+        parent.appendChild(card);
+      });
+    }
+
+    function buildDayTimelineEntries(pkg, schedule, legs) {
+      const entries = [];
+      let dayCounter = 1;
+      const pickupTiming = pkg.carPlan?.pickupTiming || "start";
+      const returnTiming = pkg.carPlan?.returnTiming || "end";
+
+      schedule.forEach((stop, stopIndex) => {
+        const loc = locations[stop.locationId];
+        const inboundLeg = stopIndex > 0 ? legs[stopIndex - 1] : null;
+        const referenceIdeas = buildVibeReferences(stop.locationId)
+          .slice(0, 2)
+          .map(ref => ({
+            label: ref.caption || loc.name,
+            url: ref.url
+          }));
+        const stopDescription = stop.note || loc.whyStay || "Family pacing stop.";
+
+        for (let dayOffset = 0; dayOffset < stop.nights; dayOffset += 1) {
+          const date = new Date(stop.startDate);
+          date.setDate(date.getDate() + dayOffset);
+          const pool = stop.isTransitNight
+            ? [
+              "Overnight Camellia Line ferry segment (Busan to Fukuoka).",
+              "Keep this day low-load: immigration, disembark, breakfast, and gentle reset.",
+              "Arrange car pickup after arrival and before Beppu transfer."
+            ]
+            : (loc.things || []).filter(Boolean);
+          const pointer = pool.length ? (dayOffset * 2) % pool.length : 0;
+          const ideas = pool.length
+            ? [
+              pool[pointer % pool.length],
+              pool[(pointer + 1) % pool.length],
+              pool[(pointer + 2) % pool.length]
+            ].filter(Boolean)
+            : [loc.whyStay || "Keep the day flexible around family energy levels."];
+          const carEvents = [];
+
+          if (pkg.carPlan?.pickupStopId === stop.id) {
+            const shouldShowPickup = (pickupTiming === "start" && dayOffset === 0)
+              || (pickupTiming === "end" && dayOffset === stop.nights - 1);
+            if (shouldShowPickup) {
+              carEvents.push(`Pick up rental car at ${stop.label}.`);
+            }
+          }
+
+          if (pkg.carPlan?.returnStopId === stop.id) {
+            const shouldShowReturn = (returnTiming === "start" && dayOffset === 0)
+              || (returnTiming === "end" && dayOffset === stop.nights - 1);
+            if (shouldShowReturn) {
+              carEvents.push(`Return rental car at ${stop.label}.`);
+            }
+          }
+
+          if (dayOffset === 0 && inboundLeg && pkg.carPlan?.pickupStopId === inboundLeg.fromStop.id) {
+            carEvents.push(`Pick up rental car at ${inboundLeg.fromStop.label} before driving to ${stop.label}.`);
+          }
+
+          const isCheckInDay = dayOffset === 0;
+          const isCheckOutDay = dayOffset === stop.nights - 1;
+          const stayProgress = `${dayOffset + 1} of ${stop.nights} nights`;
+          const stayNote = isCheckInDay && isCheckOutDay
+            ? "Check-in and check-out"
+            : isCheckInDay
+              ? "Check-in day"
+              : isCheckOutDay
+                ? "Check-out tomorrow"
+                : "In-stay day";
+          entries.push({
+            stopId: stop.id,
+            dayNumber: dayCounter,
+            date,
+            baseLabel: stop.label,
+            stayProgress,
+            stayNote,
+            description: stopDescription,
+            transfer: dayOffset === 0 && inboundLeg
+              ? {
+                fromLabel: inboundLeg.fromStop.label,
+                toLabel: inboundLeg.toStop.label,
+                mode: inboundLeg.detail.primaryMode,
+                time: inboundLeg.detail.time
+              }
+              : null,
+            carEvents,
+            ideas,
+            referenceIdeas
+          });
+          dayCounter += 1;
+        }
+      });
+
+      return entries;
+    }
+
+    function renderTimeline() {
+      const pkg = getSelectedPackage();
+      const schedule = calcStopSchedule(pkg);
+      const legs = deriveLegs(pkg);
+      const entries = buildDayTimelineEntries(pkg, schedule, legs);
+      const parent = document.getElementById("itineraryTimeline");
+      parent.innerHTML = "";
+
+      entries.forEach(entry => {
+        const item = document.createElement("article");
+        item.className = "timeline-item";
+        item.id = `timeline-${entry.stopId}`;
+        item.setAttribute("data-stop-id", entry.stopId);
+        const active = state.selectedStopId === entry.stopId;
+        const transferHtml = entry.transfer
+          ? `<div class="day-transfer"><strong>Transfer</strong> ${escapeHtml(entry.transfer.fromLabel)} → ${escapeHtml(entry.transfer.toLabel)} • ${escapeHtml(entry.transfer.mode)} • ${escapeHtml(entry.transfer.time)}</div>`
+          : "";
+        const carEventHtml = (entry.carEvents || [])
+          .map(event => `<div class="day-car-event"><strong>Car hire</strong> ${escapeHtml(event)}</div>`)
+          .join("");
+        const ideasHtml = entry.ideas
+          .map(idea => `<li>${escapeHtml(idea)}</li>`)
+          .join("");
+        const linkedIdeasHtml = entry.referenceIdeas
+          .filter(ref => ref.url)
+          .map(ref => `<li><a href="${escapeHtml(ref.url)}" target="_blank" rel="noopener noreferrer">${escapeHtml(ref.label)}</a></li>`)
+          .join("");
+        item.innerHTML = `
+          <div class="day-dot">D${entry.dayNumber}</div>
+          <div class="day-card ${active ? "active" : ""}">
+            <div class="day-header">
+              <strong>${entry.baseLabel}</strong>
+              <span class="small">${formatTimelineDate(entry.date)} • ${entry.stayProgress} • ${entry.stayNote}</span>
+            </div>
+            ${transferHtml}
+            ${carEventHtml}
+            <div class="day-grid">
+              <div class="day-slot">
+                <strong>Description</strong>
+                <p>${escapeHtml(entry.description)}</p>
+              </div>
+              <div class="day-slot">
+                <strong>Ideas</strong>
+                <ul>${ideasHtml}${linkedIdeasHtml}</ul>
+              </div>
+            </div>
+          </div>
+        `;
+        item.addEventListener("click", () => setSelectedStop(entry.stopId, false));
+        parent.appendChild(item);
+      });
+
+      const summary = summarizePackage(pkg);
+      const car = carWindowDays(pkg, schedule);
+      document.getElementById("mNights").textContent = summary.nights;
+      document.getElementById("mLegs").textContent = summary.legs;
+      document.getElementById("mCarDays").textContent = car.days;
+      document.getElementById("mPace").textContent = `${summary.pace}/100`;
+      document.getElementById("paceWidgetText").textContent = `${paceLabel(summary.pace)} pace: ${summary.bases} bases, ${summary.drivingLegs} driving legs, ${summary.driveHours.toFixed(1)}h estimated driving.`;
+    }
+
+    function localIsoDate(date) {
+      const year = date.getFullYear();
+      const month = String(date.getMonth() + 1).padStart(2, "0");
+      const day = String(date.getDate()).padStart(2, "0");
+      return `${year}-${month}-${day}`;
+    }
+
+    function exportDailyFlowXlsx() {
+      if (typeof XLSX === "undefined") {
+        window.alert("XLSX export library did not load. Please refresh and try again.");
+        return;
+      }
+
+      const pkg = getSelectedPackage();
+      const schedule = calcStopSchedule(pkg);
+      const legs = deriveLegs(pkg);
+      const entries = buildDayTimelineEntries(pkg, schedule, legs);
+      const rows = entries.map(entry => ({
+        Date: localIsoDate(entry.date),
+        Day: entry.dayNumber,
+        Location: entry.baseLabel,
+        Description: entry.description,
+        "Stay Progress": entry.stayProgress,
+        "Stay Note": entry.stayNote,
+        "Transfer From": entry.transfer ? entry.transfer.fromLabel : "",
+        "Transfer To": entry.transfer ? entry.transfer.toLabel : "",
+        "Transfer Mode": entry.transfer ? entry.transfer.mode : "",
+        "Transfer Time": entry.transfer ? entry.transfer.time : "",
+        "Car Events": (entry.carEvents || []).join(" | "),
+        Ideas: (entry.ideas || []).join(" | "),
+        "Reference Links": (entry.referenceIdeas || []).map(ref => ref.url).filter(Boolean).join(" | ")
+      }));
+
+      const sheet = XLSX.utils.json_to_sheet(rows);
+      const workbook = XLSX.utils.book_new();
+      XLSX.utils.book_append_sheet(workbook, sheet, "Daily Flow");
+      const fileName = `kyushu-daily-flow-${pkg.id}-${localIsoDate(new Date())}.xlsx`;
+      XLSX.writeFile(workbook, fileName);
+    }
+
+    function renderStays() {
+      const pkg = getSelectedPackage();
+      const schedule = calcStopSchedule(pkg);
+      const parent = document.getElementById("stayCards");
+      parent.innerHTML = "";
+
+      schedule
+        .filter(stop => !stop.isTransitNight && stop.nights > 0)
+        .forEach(stop => {
+        const loc = locations[stop.locationId];
+        const research = accommodationResearch[stop.locationId] || { references: [] };
+        const refs = (research.references || []).slice(0, 3);
+
+        const suggestionHtml = refs.length
+          ? `
+            <details class="hotel-suggestions">
+              <summary>Show stay-planning references</summary>
+              <div class="hotel-platform">
+                <strong>Curated destination source set</strong>
+                <ul class="hotel-list">
+                  ${refs.map(entry => `
+                    <li>
+                      <strong>${entry.name}</strong> <span class="chip">${entry.costBand}</span><br/>
+                      <span class="small">${entry.note}</span><br/>
+                      <a href="${entry.url}" target="_blank" rel="noopener noreferrer">Open article</a>
+                      <span class="small"> • <a href="${entry.source}" target="_blank" rel="noopener noreferrer">Source</a></span>
+                      <span class="small"> • ${entry.sourceLabel || "Reference"}</span>
+                    </li>
+                  `).join("")}
+                </ul>
+              </div>
+              <p class="small" style="margin-top: 8px;">Cost bands are indicative only. Confirm live inventory and rates for your travel dates.</p>
+            </details>
+          `
+          : `
+            <details class="hotel-suggestions">
+              <summary>Show stay-planning references</summary>
+              <p class="small" style="margin-top: 8px;">No source references loaded for this base yet.</p>
+            </details>
+          `;
+        const card = document.createElement("article");
+        card.className = "stay-card";
+        card.innerHTML = `
+          <div>
+            <h3>${stop.label}</h3>
+            <p class="small">${stop.nights} night(s) • ${formatDate(stop.startDate)} to ${formatDate(stop.endDate)}</p>
+          </div>
+          <p><strong>Area:</strong> ${loc.stayArea}</p>
+          <ul>
+            <li>Family room or connecting-room option</li>
+            <li>Parking or simple station transfer access</li>
+            <li>Laundry access for multi-week trip flow</li>
+            <li>Low-noise evenings for reliable sleep reset</li>
+          </ul>
+          <div class="chip-row">
+            <span class="chip">${loc.region}</span>
+            <span class="chip">${loc.priority}</span>
+          </div>
+          ${suggestionHtml}
+        `;
+        parent.appendChild(card);
+      });
+    }
+
+    function renderKids() {
+      const pkg = getSelectedPackage();
+      const schedule = calcStopSchedule(pkg);
+      const mission = document.getElementById("kidsMissionList");
+      const stamps = document.getElementById("stampTracker");
+      mission.innerHTML = "";
+      stamps.innerHTML = "";
+
+      schedule.forEach(stop => {
+        const loc = locations[stop.locationId];
+        const li = document.createElement("li");
+        li.textContent = `${loc.name}: complete one nature activity, one food activity, and one photo mission.`;
+        mission.appendChild(li);
+
+        const stamp = document.createElement("label");
+        stamp.className = "stamp";
+        stamp.innerHTML = `<input type="checkbox" /> ${loc.name}`;
+        stamps.appendChild(stamp);
+      });
+    }
+
+    function buildAiContextPrompt() {
+      const pkg = getSelectedPackage();
+      const summary = summarizePackage(pkg);
+      const tripNotes = (document.getElementById("tripNotes")?.value || "").trim();
+      const answers = {
+        mustKeep: (document.getElementById("qMustKeep")?.value || "").trim(),
+        hardParts: (document.getElementById("qHardParts")?.value || "").trim(),
+        tradeoffs: (document.getElementById("qTradeoffs")?.value || "").trim(),
+        kidsNeeds: (document.getElementById("qKidsNeeds")?.value || "").trim(),
+        success: (document.getElementById("qSuccess")?.value || "").trim()
+      };
+
+      return [
+        "You are helping us refine this family trip itinerary.",
+        "",
+        `Selected option: ${pkg.title}`,
+        `Summary: ${pkg.summary}`,
+        `Totals: ${summary.nights} nights, ${summary.bases} bases, ${summary.legs} transitions, ${summary.drivingLegs} driving legs, pace ${summary.pace}/100.`,
+        "",
+        "Trip notes:",
+        tripNotes || "(no trip notes provided yet)",
+        "",
+        "Feedback answers:",
+        `1) Must-keep moments: ${answers.mustKeep || "(blank)"}`,
+        `2) Hardest parts: ${answers.hardParts || "(blank)"}`,
+        `3) Simplify first: ${answers.tradeoffs || "(blank)"}`,
+        `4) Kid constraints: ${answers.kidsNeeds || "(blank)"}`,
+        `5) Success criteria: ${answers.success || "(blank)"}`,
+        "",
+        "Please propose a refined itinerary plan with clear trade-offs, what to cut first, and a kid-friendly pace strategy."
+      ].join("\n");
+    }
+
+    function refreshPromptPreview() {
+      const output = document.getElementById("aiContextOutput");
+      if (!output) return;
+      output.value = buildAiContextPrompt();
+    }
+
+    function bindPromptBuilder() {
+      const ids = ["tripNotes", "qMustKeep", "qHardParts", "qTradeoffs", "qKidsNeeds", "qSuccess"];
+      ids.forEach(id => {
+        const el = document.getElementById(id);
+        if (!el) return;
+        el.addEventListener("input", refreshPromptPreview);
+      });
+
+      const copyBtn = document.getElementById("copyAiContextBtn");
+      if (!copyBtn) return;
+      copyBtn.addEventListener("click", async () => {
+        const text = buildAiContextPrompt();
+        const output = document.getElementById("aiContextOutput");
+        if (output) output.value = text;
+        try {
+          await navigator.clipboard.writeText(text);
+          copyBtn.textContent = "Copied";
+          setTimeout(() => {
+            copyBtn.textContent = "Copy AI Context Prompt";
+          }, 1200);
+        } catch (err) {
+          if (output) {
+            output.focus();
+            output.select();
+          }
+        }
+      });
+    }
+
+    function highlightSelection() {
+      document.querySelectorAll(".stay-segment").forEach(el => {
+        el.classList.toggle("active", el.getAttribute("data-stop-id") === state.selectedStopId);
+      });
+
+      document.querySelectorAll(".base-editor").forEach(el => {
+        el.classList.toggle("active", el.id === `base-editor-${state.selectedStopId}`);
+      });
+
+      document.querySelectorAll(".timeline-item").forEach(item => {
+        const active = item.getAttribute("data-stop-id") === state.selectedStopId;
+        const card = item.querySelector(".day-card");
+        if (card) card.classList.toggle("active", active);
+      });
+
+      updateVibeSelection();
+      renderMap();
+      renderTransportAndSummary();
+    }
+
+    function validateTripLength() {
+      const targetNights = daysBetween(tripStart, tripEnd);
+      Object.values(editablePackages).forEach(pkg => {
+        const nights = pkg.stops.reduce((sum, s) => sum + s.nights, 0);
+        if (nights !== targetNights) {
+          console.warn(`${pkg.id} nights mismatch: ${nights} vs ${targetNights}`);
+        }
+      });
+    }
+
+    function bindGlobalControls() {
+      document.getElementById("busanToggle").addEventListener("change", () => {
+        normalizeBusanToggle();
+        const pkg = getSelectedPackage();
+        state.selectedStopId = pkg.stops[0]?.id || null;
+        state.selectedLegIndex = null;
+        state.selectionOrigin = "overview";
+        renderAll();
+      });
+
+      document.getElementById("mapStepBack").addEventListener("click", () => stepMapSelection(-1));
+      document.getElementById("mapStepNext").addEventListener("click", () => stepMapSelection(1));
+      document.getElementById("mapStartOver").addEventListener("click", () => startMapJourneyOver());
+      document.getElementById("exportTimelineXlsx").addEventListener("click", () => exportDailyFlowXlsx());
+
+      document.getElementById("headerToggle").addEventListener("click", () => {
+        const header = document.querySelector(".site-header");
+        const collapsed = !(header && header.classList.contains("is-collapsed"));
+        setHeaderCollapsed(collapsed);
+      });
+    }
+
+    function setQuickNavActive(activeId) {
+      quickNavEntries.forEach(({ id, link }) => {
+        const active = id === activeId;
+        link.classList.toggle("is-active", active);
+        if (active) {
+          link.setAttribute("aria-current", "location");
+        } else {
+          link.removeAttribute("aria-current");
+        }
+      });
+    }
+
+    function pickClosestQuickNavSectionId(anchorOffset = 180) {
+      if (!quickNavEntries.length) return null;
+      let closestId = quickNavEntries[0].id;
+      let bestDistance = Number.POSITIVE_INFINITY;
+      quickNavEntries.forEach(({ id, section }) => {
+        const distance = Math.abs(section.getBoundingClientRect().top - anchorOffset);
+        if (distance < bestDistance) {
+          bestDistance = distance;
+          closestId = id;
+        }
+      });
+      return closestId;
+    }
+
+    function setupQuickNavSpy() {
+      const quickNav = document.querySelector(".quick-nav");
+      if (!quickNav) return;
+
+      quickNavEntries = Array.from(quickNav.querySelectorAll('a[href^="#"]'))
+        .map(link => {
+          const id = link.getAttribute("href").slice(1);
+          const section = document.getElementById(id);
+          if (!section) return null;
+          return { id, link, section };
+        })
+        .filter(Boolean);
+
+      if (!quickNav.dataset.scrollSpyBound) {
+        quickNav.addEventListener("click", event => {
+          const target = event.target.closest('a[href^="#"]');
+          if (!target) return;
+          setQuickNavActive(target.getAttribute("href").slice(1));
+        });
+        quickNav.dataset.scrollSpyBound = "true";
+      }
+
+      if (quickNavObserver) {
+        quickNavObserver.disconnect();
+        quickNavObserver = null;
+      }
+
+      if (window.innerWidth < 1025 || !quickNavEntries.length) {
+        setQuickNavActive(null);
+        return;
+      }
+
+      const visibility = new Map(quickNavEntries.map(entry => [entry.id, 0]));
+      quickNavObserver = new IntersectionObserver(entries => {
+        entries.forEach(entry => {
+          visibility.set(entry.target.id, entry.isIntersecting ? entry.intersectionRatio : 0);
+        });
+
+        let activeId = null;
+        let bestScore = 0;
+        visibility.forEach((score, id) => {
+          if (score > bestScore) {
+            bestScore = score;
+            activeId = id;
+          }
+        });
+
+        if (!activeId) {
+          activeId = pickClosestQuickNavSectionId();
+        }
+        setQuickNavActive(activeId);
+      }, {
+        root: null,
+        rootMargin: "-22% 0px -60% 0px",
+        threshold: [0, 0.2, 0.4, 0.6, 0.8, 1]
+      });
+
+      quickNavEntries.forEach(({ section }) => quickNavObserver.observe(section));
+      setQuickNavActive(pickClosestQuickNavSectionId());
+    }
+
+    function renderAll() {
+      renderHeaderStats();
+      renderPackageCards();
+      renderStaySequence();
+      renderVibeBoard();
+      renderTransportAndSummary();
+      renderLocationDirectory();
+      renderBaseEditor();
+      renderTimeline();
+      renderStays();
+      renderCostings();
+      renderKids();
+      renderMap();
+      map.invalidateSize();
+      highlightSelection();
+      refreshPromptPreview();
+    }
+
+    if ("scrollRestoration" in history) {
+      history.scrollRestoration = "manual";
+    }
+    window.scrollTo(0, 0);
+
+    validateTripLength();
+    bindGlobalControls();
+    bindPromptBuilder();
+    normalizeBusanToggle();
+    syncMapFilterButtons();
+    setHeaderCollapsed(true);
+    setupQuickNavSpy();
+
+    state.selectedStopId = getSelectedPackage().stops[0]?.id || null;
+
+    renderAll();
+
+    window.addEventListener("resize", () => {
+      map.invalidateSize();
+      renderStaySequence();
+      setupQuickNavSpy();
+      const details = document.getElementById("transportDetails");
+      if (window.innerWidth >= 1025) {
+        details.setAttribute("open", "open");
+      }
+    });
+  </script>
+</body>
+</html>
